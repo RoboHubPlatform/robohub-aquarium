@@ -29,6 +29,13 @@ extern fn sql_delete_expense(id: i64, db: SqlDb) u32;
 extern fn sql_total_expenses(db: SqlDb, out: Slice[TotalExpensesRow], capacity: u32) u32;
 extern fn sql_insert_movement(item_id: string, kind: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, occurred_at: string, comment: string, db: SqlDb) u32;
 extern fn sql_low_stock_items(db: SqlDb, out: Slice[LowStockItemsRow], capacity: u32) u32;
+extern fn sql_insert_chore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, enabled: string, db: SqlDb) u32;
+extern fn sql_list_chores(db: SqlDb, out: Slice[Chores], capacity: u32) u32;
+extern fn sql_complete_chore(next_due_epoch: i64, last_completed_epoch: i64, usage_accum_seconds: i64, id: i64, db: SqlDb) u32;
+extern fn sql_insert_completion(chore_id: string, completed_epoch: string, note: string, db: SqlDb) u32;
+extern fn sql_snooze_chore(snoozed_until_epoch: i64, id: i64, db: SqlDb) u32;
+extern fn sql_add_usage(delta_seconds: string, id: i64, db: SqlDb) u32;
+extern fn sql_list_completions(db: SqlDb, out: Slice[ListCompletionsRow], capacity: u32) u32;
 fn InsertCategory(name: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_category(name, db)
     return Ok[u32, SqlError](changed)
@@ -115,6 +122,53 @@ fn LowStockItems(db: SqlDb, out: Slice[LowStockItemsRow], capacity: u32) Result[
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_low_stock_items(db, out, capacity)
+    if wrote == 0 {
+        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn InsertChore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, enabled: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_chore(title, description, schedule_kind, schedule_value, interval_hours, usage_interval_hours, grace_hours, priority, next_due_epoch, enabled, db)
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListChores(db: SqlDb, out: Slice[Chores], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_chores(db, out, capacity)
+    if wrote == 0 {
+        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn CompleteChore(next_due_epoch: i64, last_completed_epoch: i64, usage_accum_seconds: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_complete_chore(next_due_epoch, last_completed_epoch, usage_accum_seconds, id, db)
+    return Ok[u32, SqlError](changed)
+}
+
+fn InsertCompletion(chore_id: string, completed_epoch: string, note: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_completion(chore_id, completed_epoch, note, db)
+    return Ok[u32, SqlError](changed)
+}
+
+fn SnoozeChore(snoozed_until_epoch: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_snooze_chore(snoozed_until_epoch, id, db)
+    return Ok[u32, SqlError](changed)
+}
+
+fn AddUsage(delta_seconds: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_add_usage(delta_seconds, id, db)
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListCompletions(db: SqlDb, out: Slice[ListCompletionsRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_completions(db, out, capacity)
     if wrote == 0 {
         return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
     }

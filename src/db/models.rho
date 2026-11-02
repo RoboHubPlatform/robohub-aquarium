@@ -61,6 +61,33 @@ struct LowStockItemsRow {
     location: string
 }
 
+// A chore definition and its next due time. next_due_epoch is Unix seconds; zero means the schedule has no wall-clock due time (a usage chore).
+struct Chores {
+    id: i64
+    title: string
+    description: string
+    scheduleKind: string
+    scheduleValue: string
+    intervalHours: i64
+    usageIntervalHours: i64
+    usageAccumSeconds: i64
+    graceHours: i64
+    priority: string
+    enabled: i64
+    nextDueEpoch: i64
+    snoozedUntilEpoch: i64
+    lastCompletedEpoch: i64
+    createdAt: string
+}
+
+struct ListCompletionsRow {
+    id: i64
+    choreId: i64
+    title: string
+    completedEpoch: i64
+    note: string
+}
+
 // What is on hand, how much of it, and when to reorder.
 struct Items {
     id: i64
@@ -100,6 +127,15 @@ struct StockMovements {
     source: string
     occurredAt: string
     comment: string
+    createdAt: string
+}
+
+// One completion of a chore, with the note a person left.
+struct ChoreCompletions {
+    id: i64
+    choreId: i64
+    completedEpoch: i64
+    note: string
     createdAt: string
 }
 

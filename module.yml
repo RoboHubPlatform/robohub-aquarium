@@ -41,16 +41,21 @@ app_modules:
   - name: inventory
     route: /expenses
     enabled: true
+    version: ">=0.1.0"
     config:
       currency: RON
+  - name: scheduler
+    route: /scheduler
+    enabled: true
+    version: ">=0.1.0"
 
 # The application has a database, so the SQL port is generated for it. The
 # tables it uses are the module's; the host's own schema may grow with the
 # aquarium domain.
 sql:
   driver: rho-sql-sqlite
-  schema: ../../modules/inventory/db/schema.sql
-  queries: ../../modules/inventory/db/queries.sql
+  schema: db/schema.sql
+  queries: db/queries.sql
   out: src/db
 
 requires:

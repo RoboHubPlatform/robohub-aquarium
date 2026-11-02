@@ -3,7 +3,10 @@ module aquarium
 // The aquarium host. It owns the router and the port; the inventory module
 // included here adds its own routes under /expenses.
 include "storage.rho"
+include "db/models.rho"
+include "db/queries.rho"
 include "../../../modules/inventory/src/main.rho"
+include "../../../modules/scheduler/src/main.rho"
 
 import std.sql
 import std.web.http

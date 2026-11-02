@@ -421,6 +421,280 @@
           "text": true
         }
       ]
+    },
+    {
+      "name": "sql_insert_chore",
+      "sql": "INSERT INTO chores\n    (title, description, schedule_kind, schedule_value, interval_hours,\n     usage_interval_hours, grace_hours, priority, next_due_epoch, enabled)\nVALUES\n    (?, ?, ?, ?, ?,\n     ?, ?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "description",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "schedule_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "schedule_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "interval_hours",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "usage_interval_hours",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "grace_hours",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "priority",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "next_due_epoch",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_chores",
+      "sql": "SELECT id, title, COALESCE(description, '') AS description, schedule_kind,\n       COALESCE(schedule_value, '') AS schedule_value, interval_hours,\n       usage_interval_hours, usage_accum_seconds, grace_hours, priority,\n       enabled, next_due_epoch, snoozed_until_epoch, last_completed_epoch,\n       created_at\nFROM chores\nORDER BY enabled DESC, next_due_epoch, title",
+      "result": "Chores",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "title",
+          "column": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "description",
+          "column": "description",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "scheduleKind",
+          "column": "schedule_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "scheduleValue",
+          "column": "schedule_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "intervalHours",
+          "column": "interval_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "usageIntervalHours",
+          "column": "usage_interval_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "usageAccumSeconds",
+          "column": "usage_accum_seconds",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "graceHours",
+          "column": "grace_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "priority",
+          "column": "priority",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "column": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "nextDueEpoch",
+          "column": "next_due_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "snoozedUntilEpoch",
+          "column": "snoozed_until_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lastCompletedEpoch",
+          "column": "last_completed_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "createdAt",
+          "column": "created_at",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_complete_chore",
+      "sql": "UPDATE chores\nSET next_due_epoch = ?,\n    last_completed_epoch = ?,\n    snoozed_until_epoch = 0,\n    usage_accum_seconds = ?\nWHERE id = ?",
+      "parameters": [
+        {
+          "name": "next_due_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "last_completed_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "usage_accum_seconds",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_completion",
+      "sql": "INSERT INTO chore_completions (chore_id, completed_epoch, note)\nVALUES (?, ?, ?)",
+      "parameters": [
+        {
+          "name": "chore_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "completed_epoch",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_snooze_chore",
+      "sql": "UPDATE chores SET snoozed_until_epoch = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "snoozed_until_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_add_usage",
+      "sql": "UPDATE chores\nSET usage_accum_seconds = usage_accum_seconds + ?\nWHERE id = ?",
+      "parameters": [
+        {
+          "name": "delta_seconds",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_completions",
+      "sql": "SELECT c.id, c.chore_id, ch.title, c.completed_epoch,\n       COALESCE(c.note, '') AS note\nFROM chore_completions c\nLEFT JOIN chores ch ON ch.id = c.chore_id\nORDER BY c.completed_epoch DESC, c.id DESC\nLIMIT 50",
+      "result": "ListCompletionsRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "choreId",
+          "column": "chore_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "title",
+          "column": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "completedEpoch",
+          "column": "completed_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
     }
   ]
 }
