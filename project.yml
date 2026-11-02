@@ -1,0 +1,33 @@
+version: 1
+
+output_dir: build/generated
+build_dir: build
+
+targets:
+  - id: go-server
+    emitter: go
+    kind: server
+    description: Aquarium HTTP service
+    router: serveMux
+    ports:
+      - logemit
+    api:
+      public_paths: "/, /expenses"
+    files:
+      - path: app.go
+        role: implementation
+      - path: runtime.go
+        role: runtime
+      - path: server.go
+        role: server
+      - path: main.go
+        role: entrypoint
+      - path: go.mod
+        role: build
+      - path: static
+        kind: dir
+    templates:
+      - name: layout
+        file: templates/layout.html
+      - name: home
+        file: templates/home.html

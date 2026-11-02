@@ -1,0 +1,69 @@
+#
+# aquarium — the RoboHub aquarium application.
+#
+# One HTTP service with one port. The domain handlers and the reusable modules
+# it carries all register on the same router; the inventory module is included
+# from modules/inventory and serves /expenses.
+#
+module:
+  name: aquarium
+  type: rho
+  version: 0.1.0
+  description: >
+    The RoboHub aquarium controller: water chemistry, equipment, schedules and
+    the inventory of what keeps them running.
+  maintainer: "Aurel Miron"
+  license: "MIT"
+  created: "2026-11-02"
+
+main: src/main.rho
+
+build:
+  language: go
+  targets:
+    - go-server
+
+application:
+  kind: keeper-hosted
+  title: Aquarium
+  description: Aquarium controller with inventory and expense tracking.
+  route: /
+  port: "8480"
+  command: aquarium
+
+# The reusable modules this application carries. The keeper uses this list to
+# know which application serves a module's routes.
+# The module instance is configured here, not in the module: its route and the
+# database files the host's SQL port is generated from belong to this
+# application. The workspace its records live in follows the application's
+# ROBOHUB_APP_WORKSPACE.
+app_modules:
+  - name: inventory
+    route: /expenses
+    enabled: true
+    config:
+      currency: RON
+
+# The application has a database, so the SQL port is generated for it. The
+# tables it uses are the module's; the host's own schema may grow with the
+# aquarium domain.
+sql:
+  driver: rho-sql-sqlite
+  schema: ../../modules/inventory/db/schema.sql
+  queries: ../../modules/inventory/db/queries.sql
+  out: src/db
+
+requires:
+  - name: rho/sqlite
+    version: ^1.0.0
+
+deps:
+  rho-log: ">=0.1.0"
+
+docs:
+  title: Aquarium
+  section: applications
+  order: "40"
+  index: docs/index.md
+  sources:
+    - docs/index.md

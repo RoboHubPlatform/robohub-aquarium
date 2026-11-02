@@ -1,0 +1,2 @@
+-- The aquarium domain's own tables. The inventory module owns its tables and
+-- creates them from its own schema, so this file starts empty.

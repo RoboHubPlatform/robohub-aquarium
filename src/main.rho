@@ -1,0 +1,30 @@
+module aquarium
+
+// The aquarium host. It owns the router and the port; the inventory module
+// included here adds its own routes under /expenses.
+include "storage.rho"
+include "../../../modules/inventory/src/main.rho"
+
+import std.sql
+import std.web.http
+import std.web.template
+import rho.log
+
+route GET "/" => aquarium_home
+
+fn aquarium_keeper_link() string {
+    let port: string = getenv("RHO_KEEPER_PORT")
+    if port == "" {
+        return ""
+    }
+    return "<a class=\"keeper\" href=\"#\" data-keeper-port=\"" + escape_html(port) +
+        "\">Keeper</a>"
+}
+
+fn aquarium_home(req: Request) Response {
+    let body: string = template_fill(template_get("home"), vars("", ""))
+    let document: string = template_fill(template_get("layout"),
+        vars("title", "Aquarium") + vars("body", body) +
+        vars("keeper", aquarium_keeper_link()))
+    return html(status_ok(), document)
+}

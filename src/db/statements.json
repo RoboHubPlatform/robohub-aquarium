@@ -1,0 +1,426 @@
+{
+  "package": "queries",
+  "statements": [
+    {
+      "name": "sql_insert_category",
+      "sql": "INSERT INTO categories (name) VALUES (?)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_categories",
+      "sql": "SELECT id, name FROM categories ORDER BY name",
+      "result": "Categories",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_item",
+      "sql": "INSERT INTO items (name, category_id, unit, quantity_milli, reorder_milli,\n                   location, notes)\nVALUES (?, NULLIF(?, ''), ?, ?,\n        ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantity_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "reorder_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "location",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_items",
+      "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nORDER BY i.name",
+      "result": "ListItemsRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category",
+          "column": "category",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "categoryId",
+          "column": "category_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantityMilli",
+          "column": "quantity_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "reorderMilli",
+          "column": "reorder_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "location",
+          "column": "location",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "column": "notes",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_update_item_details",
+      "sql": "UPDATE items\nSET name = ?, category_id = NULLIF(?, ''), unit = ?,\n    reorder_milli = ?, location = ?, notes = ?\nWHERE id = ?",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "reorder_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "location",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_item_stock",
+      "sql": "UPDATE items SET quantity_milli = quantity_milli + ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "delta",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_expense",
+      "sql": "INSERT INTO expenses\n    (item_id, item, category_id, quantity_milli, unit_price_cents, total_cents,\n     source, purchased_at, comment)\nVALUES\n    (NULLIF(?, ''), ?, NULLIF(?, ''), ?,\n     ?, ?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "item",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantity_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit_price_cents",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "total_cents",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "purchased_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "comment",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_expenses",
+      "sql": "SELECT e.id, e.item, COALESCE(c.name, '') AS category,\n       e.quantity_milli, e.unit_price_cents, e.total_cents,\n       COALESCE(e.source, '') AS source, e.purchased_at,\n       COALESCE(e.comment, '') AS comment\nFROM expenses e\nLEFT JOIN categories c ON c.id = e.category_id\nORDER BY e.purchased_at DESC, e.id DESC",
+      "result": "ListExpensesRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "item",
+          "column": "item",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category",
+          "column": "category",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantityMilli",
+          "column": "quantity_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unitPriceCents",
+          "column": "unit_price_cents",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "totalCents",
+          "column": "total_cents",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "source",
+          "column": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "purchasedAt",
+          "column": "purchased_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "comment",
+          "column": "comment",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_delete_expense",
+      "sql": "DELETE FROM expenses WHERE id = ?",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_total_expenses",
+      "sql": "SELECT COALESCE(SUM(total_cents), 0) AS total_cents FROM expenses",
+      "result": "TotalExpensesRow",
+      "fields": [
+        {
+          "name": "totalCents",
+          "column": "total_cents",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_movement",
+      "sql": "INSERT INTO stock_movements\n    (item_id, kind, quantity_milli, unit_price_cents, total_cents, source,\n     occurred_at, comment)\nVALUES\n    (?, ?, ?, ?, ?, ?,\n     ?, ?)",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantity_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit_price_cents",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "total_cents",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "occurred_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "comment",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_low_stock_items",
+      "sql": "SELECT i.id, i.name, i.quantity_milli, i.reorder_milli, i.unit,\n       COALESCE(i.location, '') AS location\nFROM items i\nWHERE i.reorder_milli \u003e 0 AND i.quantity_milli \u003c= i.reorder_milli\nORDER BY i.quantity_milli",
+      "result": "LowStockItemsRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantityMilli",
+          "column": "quantity_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "reorderMilli",
+          "column": "reorder_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "location",
+          "column": "location",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    }
+  ]
+}
