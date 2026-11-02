@@ -37,3 +37,12 @@ A switch calls its configured hook with the new state and shows it in the card.
 
 All forms are cards: a semi-opaque panel over the aquarium background, with the
 same colours on every module page.
+
+
+## Plug switch widget
+
+A Shelly Plug M Gen3 registered on a gateway can be driven from the aquarium
+dashboard with a **Switch** widget. Point the widget at the gateway's device
+switch URL (`http://gateway/api/v1/devices/1/switch`, method POST); pressing the
+widget sends `state=on` or `state=off`. The gateway polls the plug over HTTP RPC
+and keeps the state and power figure.
