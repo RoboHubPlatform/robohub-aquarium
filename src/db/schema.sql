@@ -82,3 +82,82 @@ CREATE TABLE IF NOT EXISTS chore_completions (
 );
 
 CREATE INDEX IF NOT EXISTS chore_completions_chore ON chore_completions(chore_id);
+
+-- Equipment the application can call, read or simulate. Without a board a
+-- device is still a row with a state and the last value it reported.
+CREATE TABLE IF NOT EXISTS devices (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    state           TEXT NOT NULL DEFAULT 'unknown',
+    last_value      TEXT,
+    updated_epoch   INTEGER NOT NULL DEFAULT 0
+);
+
+-- A rule is a metric, an operator and an action. The engine evaluates it when a
+-- value is fed in; the hardware binding can be added without changing the rule.
+CREATE TABLE IF NOT EXISTS automation_rules (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    metric          TEXT NOT NULL,
+    operator        TEXT NOT NULL,
+    threshold       TEXT NOT NULL DEFAULT '0',
+    action          TEXT NOT NULL,
+    enabled         INTEGER NOT NULL DEFAULT 1,
+    state           TEXT NOT NULL DEFAULT 'normal',
+    last_value      TEXT NOT NULL DEFAULT '0',
+    updated_epoch   INTEGER NOT NULL DEFAULT 0
+);
+
+-- Manual water tests, the chemistry log.
+CREATE TABLE IF NOT EXISTS water_tests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter       TEXT NOT NULL,
+    value           TEXT NOT NULL,
+    unit            TEXT NOT NULL DEFAULT '',
+    tested_at       TEXT NOT NULL,
+    note            TEXT
+);
+
+-- Operational modes with an expiry: water change, feeding, and so on.
+CREATE TABLE IF NOT EXISTS aquarium_modes (
+    name                TEXT PRIMARY KEY,
+    active_until_epoch  INTEGER NOT NULL DEFAULT 0,
+    note                TEXT
+);
+
+-- Append-only audit trail. A state change, a manual override, a trip.
+CREATE TABLE IF NOT EXISTS system_events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    severity        TEXT NOT NULL DEFAULT 'INFO',
+    kind            TEXT NOT NULL,
+    message         TEXT NOT NULL,
+    created_epoch   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS system_events_created ON system_events(created_epoch);
+
+-- A dashboard widget. numeric shows the last value; chart shows the last
+-- `points` values as a sparkline. source_kind is manual or url.
+CREATE TABLE IF NOT EXISTS widgets (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    title            TEXT NOT NULL,
+    kind             TEXT NOT NULL DEFAULT 'numeric',
+    source_kind      TEXT NOT NULL DEFAULT 'manual',
+    source           TEXT,
+    method           TEXT NOT NULL DEFAULT 'GET',
+    unit             TEXT,
+    points           INTEGER NOT NULL DEFAULT 24,
+    created_epoch    INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS widget_values (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    widget_id        INTEGER NOT NULL REFERENCES widgets(id),
+    value_text       TEXT NOT NULL,
+    value_milli      INTEGER NOT NULL DEFAULT 0,
+    recorded_epoch   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS widget_values_widget ON widget_values(widget_id);

@@ -1,0 +1,6 @@
+name: aquarium
+suites:
+  - name: aquarium-smoke
+    kind: command
+    tags: [smoke]
+    command: [python3, tests/aquarium_smoke.py]

@@ -1,0 +1,546 @@
+module aquarium
+
+// The aquarium domain: equipment, automation rules, chemistry, operational
+// modes and the audit trail.
+//
+// There is no hardware binding yet. A device has a state and a last value; a
+// rule is evaluated against a value fed in from the page or an API. The same
+// tables and rules can be driven by a node later without changing the UI.
+
+import std.core.ptr
+import std.core.result
+import std.core.slice
+import std.sql
+import std.web.http
+import std.web.template
+
+const AQUA_CAPACITY: u32 = 256
+
+fn aqua_trim(text: string) string {
+    var out: string = text
+    while rho_strlen(out) > 0 &&
+        (rho_str_eq(rho_str_slice(out, 0, 1), " ") || rho_str_eq(rho_str_slice(out, 0, 1), "\n")) {
+        out = rho_str_slice(out, 1, u32(rho_strlen(out)) - 1)
+    }
+    while rho_strlen(out) > 0 &&
+        (rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), " ") ||
+         rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), "\n")) {
+        out = rho_str_slice(out, 0, u32(rho_strlen(out)) - 1)
+    }
+    return out
+}
+
+fn aqua_form(body: string, name: string) string {
+    var rest: string = body + "&"
+    while rho_strlen(rest) > 0 {
+        let amp: i32 = rho_str_index_of(rest, "&")
+        if amp < 0 {
+            break
+        }
+        let pair: string = rho_str_slice(rest, 0, u32(amp))
+        rest = rho_str_slice(rest, u32(amp) + 1, u32(rho_strlen(rest)) - u32(amp) - 1)
+        let equals: i32 = rho_str_index_of(pair, "=")
+        if equals < 0 {
+            continue
+        }
+        if rho_str_eq(rho_str_slice(pair, 0, u32(equals)), name) {
+            return aqua_decode(rho_str_slice(pair, u32(equals) + 1,
+                u32(rho_strlen(pair)) - u32(equals) - 1))
+        }
+    }
+    return ""
+}
+
+fn aqua_decode(value: string) string {
+    var out: string = ""
+    var i: u32 = 0
+    let length: u32 = u32(rho_strlen(value))
+    while i < length {
+        let ch: string = rho_str_slice(value, i, 1)
+        if rho_str_eq(ch, "+") {
+            out = out + " "
+            i = i + 1
+        } else if rho_str_eq(ch, "%") && i + 2 < length {
+            let high: u32 = aqua_hex(rho_str_slice(value, i + 1, 1))
+            let low: u32 = aqua_hex(rho_str_slice(value, i + 2, 1))
+            out = out + rho_str_from_byte(u8(high * 16 + low))
+            i = i + 3
+        } else {
+            out = out + ch
+            i = i + 1
+        }
+    }
+    return out
+}
+
+fn aqua_hex(ch: string) u32 {
+    let digits: string = "0123456789abcdef"
+    let upper: string = "0123456789ABCDEF"
+    var i: u32 = 0
+    while i < 16 {
+        if rho_str_eq(ch, rho_str_slice(digits, i, 1)) ||
+            rho_str_eq(ch, rho_str_slice(upper, i, 1)) {
+            return i
+        }
+        i = i + 1
+    }
+    return 0
+}
+
+fn aqua_db_path() string {
+    let workspace: string = getenv("ROBOHUB_APP_WORKSPACE")
+    if workspace == "" {
+        workspace = getenv("HOME") + "/.rho/aquarium"
+    }
+    let dir: string = workspace + "/data"
+    ignore_u32(rho_exec("mkdir", "-p " + dir, dir + "/mkdir.txt"))
+    return dir + "/app.db"
+}
+
+fn aqua_now() u32 {
+    let report: string = aqua_db_path() + ".now"
+    if rho_exec("date", "+%s", report) == 0 {
+        return rho_int_from_str(aqua_trim(rho_read_text(report)))
+    }
+    return 0
+}
+
+fn aqua_date(epoch: u32) string {
+    if epoch == 0 {
+        return ""
+    }
+    let report: string = aqua_db_path() + ".date"
+    if rho_exec("date", "-d @" + rho_int_to_str(epoch) + " \"+%Y-%m-%d %H:%M\"", report) == 0 {
+        return aqua_trim(rho_read_text(report))
+    }
+    return ""
+}
+
+fn aqua_parse_milli(text: string) i64 {
+    var value: string = aqua_trim(text)
+    var sign: i64 = 1
+    if rho_strlen(value) > 0 && rho_str_eq(rho_str_slice(value, 0, 1), "-") {
+        sign = -1
+        value = rho_str_slice(value, 1, u32(rho_strlen(value)) - 1)
+    }
+    var whole: string = value
+    var fraction: string = ""
+    let dot: i32 = rho_str_index_of(value, ".")
+    if dot >= 0 {
+        whole = rho_str_slice(value, 0, u32(dot))
+        fraction = rho_str_slice(value, u32(dot) + 1,
+            u32(rho_strlen(value)) - u32(dot) - 1)
+    }
+    if rho_strlen(whole) == 0 {
+        whole = "0"
+    }
+    var frac: i64 = 0
+    var i: u32 = 0
+    while i < 3 {
+        if i < u32(rho_strlen(fraction)) {
+            frac = frac * 10 + i64(rho_int_from_str(rho_str_slice(fraction, i, 1)))
+        } else {
+            frac = frac * 10
+        }
+        i = i + 1
+    }
+    return sign * (i64(rho_int_from_str(whole)) * 1000 + frac)
+}
+
+fn aqua_compare(value: string, operator: string, threshold: string) bool {
+    let left: i64 = aqua_parse_milli(value)
+    let right: i64 = aqua_parse_milli(threshold)
+    if rho_str_eq(operator, "<") {
+        return left < right
+    }
+    if rho_str_eq(operator, "<=") {
+        return left <= right
+    }
+    if rho_str_eq(operator, ">") {
+        return left > right
+    }
+    if rho_str_eq(operator, ">=") {
+        return left >= right
+    }
+    return left == right
+}
+
+fn aqua_alert(level: string, message: string) void {
+    // The audit trail is always written. A notification hub is optional: the
+    // aquarium's plugins list is what turns an event into an e-mail or a chat.
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(InsertEvent(level, "automation", message,
+            rho_int_to_str(aqua_now()), db))
+        sql_close(db)
+    }
+}
+
+fn aqua_ignore_result(value: Result[u32, SqlError]) void {
+}
+
+fn aqua_keeper_link() string {
+    let port: string = getenv("RHO_KEEPER_PORT")
+    if port == "" {
+        return ""
+    }
+    return "<a class=\"keeper\" href=\"#\" data-keeper-port=\"" + escape_html(port) +
+        "\">Keeper</a>"
+}
+
+fn aqua_page(title: string, body: string) Response {
+    let document: string = template_fill(template_get("layout"),
+        vars("title", title) + vars("body", body) + vars("keeper", aqua_keeper_link()))
+    return html(status_ok(), document)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Equipment                                                                 */
+/* -------------------------------------------------------------------------- */
+
+fn equipment_page(req: Request) Response {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if !opened.is_ok {
+        return aqua_page("Equipment", "<p>The database could not be opened.</p>")
+    }
+    let db: SqlDb = opened.ok
+    ignore_u32(sql_apply(db, ""))
+    let devices: Devices[256]
+    let slice: Slice[Devices] = Slice[Devices]{ Ptr[Devices](&devices[0]), AQUA_CAPACITY }
+    let listed: Result[u32, SqlError] = ListDevices(db, slice, AQUA_CAPACITY)
+    var count: u32 = 0
+    if listed.is_ok {
+        count = listed.ok
+    }
+    sql_close(db)
+    var rows: string = ""
+    var i: u32 = 0
+    while i < count {
+        let device: Devices = devices[i]
+        rows = rows + "<tr><td>" + escape_html(device.name) + "</td><td>" +
+            escape_html(device.kind) + "</td><td>" + escape_html(device.state) +
+            "</td><td>" + escape_html(device.lastValue) + "</td><td>" +
+            "<form method=\"post\" action=\"/equipment/state\"><input type=\"hidden\" name=\"id\" value=\"" +
+            rho_int_to_str(u32(device.id)) + "\"><select name=\"state\"><option>on</option><option>off</option></select>" +
+            "<button type=\"submit\" class=\"quiet\">Set</button></form>" +
+            "<form method=\"post\" action=\"/equipment/value\"><input type=\"hidden\" name=\"id\" value=\"" +
+            rho_int_to_str(u32(device.id)) + "\"><input name=\"value\" placeholder=\"value\">" +
+            "<button type=\"submit\" class=\"quiet\">Report</button></form></td></tr>"
+        i = i + 1
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"5\">No equipment defined.</td></tr>"
+    }
+    let body: string = "<h1>Equipment</h1><p>Pumps, lights, heaters and the devices around them. " +
+        "Without a board a device is a row with a state and the last value reported; the same row becomes real when a node binds it.</p>" +
+        "<form class=\"panel-form\" method=\"post\" action=\"/equipment/add\"><div class=\"grid\">" +
+        "<label>Name<input name=\"name\" required placeholder=\"Return pump\"></label>" +
+        "<label>Kind<input name=\"kind\" placeholder=\"pump, light, heater, fan, sensor\"></label>" +
+        "<label>Initial state<select name=\"state\"><option>off</option><option>on</option></select></label>" +
+        "</div><div class=\"form-actions\"><button type=\"submit\">Add equipment</button></div></form>" +
+        "<h2>Devices</h2><table><thead><tr><th>Name</th><th>Kind</th><th>State</th><th>Last value</th><th></th></tr></thead><tbody>" +
+        rows + "</tbody></table>"
+    return aqua_page("Equipment", body)
+}
+
+fn equipment_add(req: Request) Response {
+    let body: string = request_body(req)
+    let name: string = aqua_trim(aqua_form(body, "name"))
+    if rho_strlen(name) == 0 {
+        return equipment_page(req)
+    }
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(InsertDevice(name, aqua_trim(aqua_form(body, "kind")),
+            aqua_trim(aqua_form(body, "state")), "", rho_int_to_str(aqua_now()), db))
+        sql_close(db)
+    }
+    return equipment_page(req)
+}
+
+fn equipment_state(req: Request) Response {
+    let body: string = request_body(req)
+    let id: u32 = rho_int_from_str(aqua_trim(aqua_form(body, "id")))
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(UpdateDeviceState(aqua_trim(aqua_form(body, "state")),
+            i64(aqua_now()), i64(id), db))
+        sql_close(db)
+    }
+    return equipment_page(req)
+}
+
+fn equipment_value(req: Request) Response {
+    let body: string = request_body(req)
+    let id: u32 = rho_int_from_str(aqua_trim(aqua_form(body, "id")))
+    let value: string = aqua_trim(aqua_form(body, "value"))
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(UpdateDeviceValue(value, i64(aqua_now()), i64(id), db))
+        sql_close(db)
+    }
+    return equipment_page(req)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Automation                                                                */
+/* -------------------------------------------------------------------------- */
+
+fn automation_page(req: Request) Response {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if !opened.is_ok {
+        return aqua_page("Automation", "<p>The database could not be opened.</p>")
+    }
+    let db: SqlDb = opened.ok
+    ignore_u32(sql_apply(db, ""))
+    let rules: AutomationRules[256]
+    let slice: Slice[AutomationRules] = Slice[AutomationRules]{
+        Ptr[AutomationRules](&rules[0]), AQUA_CAPACITY }
+    let listed: Result[u32, SqlError] = ListRules(db, slice, AQUA_CAPACITY)
+    var count: u32 = 0
+    if listed.is_ok {
+        count = listed.ok
+    }
+    sql_close(db)
+    var rows: string = ""
+    var i: u32 = 0
+    while i < count {
+        let rule: AutomationRules = rules[i]
+        rows = rows + "<tr><td>" + escape_html(rule.name) + "</td><td>" +
+            escape_html(rule.kind) + "</td><td>" + escape_html(rule.metric) +
+            " " + escape_html(rule.operator) + " " + escape_html(rule.threshold) +
+            "</td><td>" + escape_html(rule.state) + "</td><td>" +
+            "<form method=\"post\" action=\"/automation/simulate\"><input type=\"hidden\" name=\"id\" value=\"" +
+            rho_int_to_str(u32(rule.id)) + "\"><input name=\"value\" placeholder=\"value\">" +
+            "<button type=\"submit\" class=\"quiet\">Evaluate</button></form></td></tr>"
+        i = i + 1
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"5\">No automation rules.</td></tr>"
+    }
+    let body: string = "<h1>Automation</h1><p>Rules for ATO, lighting, pH/CO2, dosing, flow, thermal protection, leaks and pumps. " +
+        "Evaluate a value to drive the rule; the hardware binding is the next layer, not a change to the rule.</p>" +
+        "<form class=\"panel-form\" method=\"post\" action=\"/automation/add\"><div class=\"grid\">" +
+        "<label>Name<input name=\"name\" required placeholder=\"Sump over temperature\"></label>" +
+        "<label>Kind<input name=\"kind\" placeholder=\"thermal, ato, ph_co2, leak, dosing, lighting\"></label>" +
+        "<label>Metric<input name=\"metric\" placeholder=\"water_temp\"></label>" +
+        "<label>Operator<select name=\"operator\"><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option></select></label>" +
+        "<label>Threshold<input name=\"threshold\" placeholder=\"28.0\"></label>" +
+        "<label>Action<input name=\"action\" placeholder=\"cool_on\"></label>" +
+        "</div><div class=\"form-actions\"><button type=\"submit\">Add rule</button></div></form>" +
+        "<h2>Rules</h2><table><thead><tr><th>Name</th><th>Kind</th><th>Condition</th><th>State</th><th></th></tr></thead><tbody>" +
+        rows + "</tbody></table>"
+    return aqua_page("Automation", body)
+}
+
+fn automation_add(req: Request) Response {
+    let body: string = request_body(req)
+    let name: string = aqua_trim(aqua_form(body, "name"))
+    if rho_strlen(name) == 0 {
+        return automation_page(req)
+    }
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(InsertRule(name, aqua_trim(aqua_form(body, "kind")),
+            aqua_trim(aqua_form(body, "metric")), aqua_trim(aqua_form(body, "operator")),
+            aqua_trim(aqua_form(body, "threshold")), aqua_trim(aqua_form(body, "action")),
+            "1", rho_int_to_str(aqua_now()), db))
+        sql_close(db)
+    }
+    return automation_page(req)
+}
+
+fn automation_simulate(req: Request) Response {
+    let body: string = request_body(req)
+    let id: u32 = rho_int_from_str(aqua_trim(aqua_form(body, "id")))
+    let value: string = aqua_trim(aqua_form(body, "value"))
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if !opened.is_ok {
+        return automation_page(req)
+    }
+    let db: SqlDb = opened.ok
+    ignore_u32(sql_apply(db, ""))
+    let rules: AutomationRules[256]
+    let slice: Slice[AutomationRules] = Slice[AutomationRules]{
+        Ptr[AutomationRules](&rules[0]), AQUA_CAPACITY }
+    let listed: Result[u32, SqlError] = ListRules(db, slice, AQUA_CAPACITY)
+    var count: u32 = 0
+    if listed.is_ok {
+        count = listed.ok
+    }
+    var i: u32 = 0
+    while i < count {
+        if u32(rules[i].id) == id {
+            let rule: AutomationRules = rules[i]
+            let triggered: bool = aqua_compare(value, rule.operator, rule.threshold)
+            var state: string = "normal"
+            if triggered {
+                state = "triggered"
+            }
+            aqua_ignore_result(UpdateRule(rule.enabled, state, value, i64(aqua_now()),
+                i64(id), db))
+            if triggered {
+                aqua_ignore_result(InsertEvent("WARNING", rule.kind,
+                    rule.name + " triggered at " + value, rho_int_to_str(aqua_now()), db))
+            }
+        }
+        i = i + 1
+    }
+    sql_close(db)
+    return automation_page(req)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Chemistry, modes and events                                               */
+/* -------------------------------------------------------------------------- */
+
+fn chemistry_page(req: Request) Response {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if !opened.is_ok {
+        return aqua_page("Chemistry", "<p>The database could not be opened.</p>")
+    }
+    let db: SqlDb = opened.ok
+    ignore_u32(sql_apply(db, ""))
+    let tests: WaterTests[256]
+    let slice: Slice[WaterTests] = Slice[WaterTests]{ Ptr[WaterTests](&tests[0]), AQUA_CAPACITY }
+    let listed: Result[u32, SqlError] = ListTests(db, slice, AQUA_CAPACITY)
+    var count: u32 = 0
+    if listed.is_ok {
+        count = listed.ok
+    }
+    sql_close(db)
+    var rows: string = ""
+    var i: u32 = 0
+    while i < count {
+        let test: WaterTests = tests[i]
+        rows = rows + "<tr><td>" + escape_html(test.parameter) + "</td><td>" +
+            escape_html(test.value) + " " + escape_html(test.unit) + "</td><td>" +
+            escape_html(test.testedAt) + "</td><td>" + escape_html(test.note) + "</td></tr>"
+        i = i + 1
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"4\">No water tests recorded.</td></tr>"
+    }
+    let today: string = aqua_date(aqua_now())
+    let body: string = "<h1>Water chemistry</h1><p>Ammonia, nitrite, nitrate, phosphate, KH, calcium and magnesium over time.</p>" +
+        "<form class=\"panel-form\" method=\"post\" action=\"/chemistry/add\"><div class=\"grid\">" +
+        "<label>Parameter<input name=\"parameter\" placeholder=\"Nitrate\"></label>" +
+        "<label>Value<input name=\"value\" placeholder=\"5\"></label>" +
+        "<label>Unit<input name=\"unit\" placeholder=\"ppm\"></label>" +
+        "<label>Tested at<input name=\"tested_at\" value=\"" + escape_html(today) + "\"></label>" +
+        "<label>Note<input name=\"note\"></label></div><div class=\"form-actions\">" +
+        "<button type=\"submit\">Record test</button></div></form>" +
+        "<h2>Log</h2><table><thead><tr><th>Parameter</th><th>Value</th><th>Tested</th><th>Note</th></tr></thead><tbody>" +
+        rows + "</tbody></table>"
+    return aqua_page("Chemistry", body)
+}
+
+fn chemistry_add(req: Request) Response {
+    let body: string = request_body(req)
+    let parameter: string = aqua_trim(aqua_form(body, "parameter"))
+    if rho_strlen(parameter) == 0 {
+        return chemistry_page(req)
+    }
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(InsertTest(parameter, aqua_trim(aqua_form(body, "value")),
+            aqua_trim(aqua_form(body, "unit")), aqua_trim(aqua_form(body, "tested_at")),
+            aqua_trim(aqua_form(body, "note")), db))
+        sql_close(db)
+    }
+    return chemistry_page(req)
+}
+
+fn modes_page(req: Request) Response {
+    let now: u32 = aqua_now()
+    let body: string = "<h1>Operational modes</h1><p>Water change and feeding pause the equipment they name and resume when the timer expires.</p>" +
+        "<form class=\"panel-form\" method=\"post\" action=\"/modes/start\"><div class=\"grid\">" +
+        "<label>Mode<select name=\"name\"><option>water_change</option><option>feeding</option></select></label>" +
+        "<label>Duration (minutes)<input name=\"minutes\" value=\"30\" inputmode=\"numeric\"></label>" +
+        "<label>Note<input name=\"note\"></label></div><div class=\"form-actions\">" +
+        "<button type=\"submit\">Start mode</button></div></form>" +
+        "<form class=\"panel-form\" method=\"post\" action=\"/modes/stop\"><div class=\"form-actions\">" +
+        "<button type=\"submit\" class=\"quiet\">Resume normal operation</button></div></form>" +
+        "<p><small>Current time: " + escape_html(aqua_date(now)) + "</small></p>"
+    return aqua_page("Modes", body)
+}
+
+fn modes_start(req: Request) Response {
+    let body: string = request_body(req)
+    let name: string = aqua_trim(aqua_form(body, "name"))
+    var minutes: u32 = rho_int_from_str(aqua_trim(aqua_form(body, "minutes")))
+    if minutes == 0 {
+        minutes = 30
+    }
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(SetMode(name, rho_int_to_str(aqua_now() + minutes * 60),
+            aqua_trim(aqua_form(body, "note")), db))
+        aqua_ignore_result(InsertEvent("INFO", "mode",
+            name + " started for " + rho_int_to_str(minutes) + " minutes",
+            rho_int_to_str(aqua_now()), db))
+        sql_close(db)
+    }
+    return modes_page(req)
+}
+
+fn modes_stop(req: Request) Response {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        let db: SqlDb = opened.ok
+        ignore_u32(sql_apply(db, ""))
+        aqua_ignore_result(SetMode("water_change", "0", "", db))
+        aqua_ignore_result(SetMode("feeding", "0", "", db))
+        aqua_ignore_result(InsertEvent("INFO", "mode", "normal operation resumed",
+            rho_int_to_str(aqua_now()), db))
+        sql_close(db)
+    }
+    return modes_page(req)
+}
+
+fn events_page(req: Request) Response {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if !opened.is_ok {
+        return aqua_page("Events", "<p>The database could not be opened.</p>")
+    }
+    let db: SqlDb = opened.ok
+    ignore_u32(sql_apply(db, ""))
+    let events: SystemEvents[256]
+    let slice: Slice[SystemEvents] = Slice[SystemEvents]{
+        Ptr[SystemEvents](&events[0]), AQUA_CAPACITY }
+    let listed: Result[u32, SqlError] = ListEvents(db, slice, AQUA_CAPACITY)
+    var count: u32 = 0
+    if listed.is_ok {
+        count = listed.ok
+    }
+    sql_close(db)
+    var rows: string = ""
+    var i: u32 = 0
+    while i < count {
+        let event: SystemEvents = events[i]
+        rows = rows + "<tr><td>" + escape_html(aqua_date(u32(event.createdEpoch))) +
+            "</td><td>" + escape_html(event.severity) + "</td><td>" +
+            escape_html(event.kind) + "</td><td>" + escape_html(event.message) + "</td></tr>"
+        i = i + 1
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"4\">No events recorded.</td></tr>"
+    }
+    return aqua_page("Events", "<h1>System events</h1><p>The append-only audit trail: overrides, trips, modes and automation.</p>" +
+        "<table><thead><tr><th>When</th><th>Severity</th><th>Kind</th><th>Message</th></tr></thead><tbody>" +
+        rows + "</tbody></table>")
+}

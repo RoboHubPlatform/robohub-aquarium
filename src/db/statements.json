@@ -695,6 +695,745 @@
           "text": true
         }
       ]
+    },
+    {
+      "name": "sql_insert_device",
+      "sql": "INSERT INTO devices (name, kind, state, last_value, updated_epoch)\nVALUES (?, ?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "last_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_epoch",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_devices",
+      "sql": "SELECT id, name, kind, state, COALESCE(last_value, '') AS last_value, updated_epoch\nFROM devices ORDER BY name",
+      "result": "Devices",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "state",
+          "column": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lastValue",
+          "column": "last_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updatedEpoch",
+          "column": "updated_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_update_device_state",
+      "sql": "UPDATE devices SET state = ?, updated_epoch = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_device_value",
+      "sql": "UPDATE devices SET last_value = ?, updated_epoch = ?\nWHERE id = ?",
+      "parameters": [
+        {
+          "name": "last_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_rule",
+      "sql": "INSERT INTO automation_rules\n    (name, kind, metric, operator, threshold, action, enabled, state, last_value,\n     updated_epoch)\nVALUES\n    (?, ?, ?, ?, ?, ?, ?, 'normal', 0,\n     ?)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "metric",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "operator",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "threshold",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_epoch",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_rules",
+      "sql": "SELECT id, name, kind, metric, operator, threshold, action, enabled, state,\n       last_value, updated_epoch\nFROM automation_rules ORDER BY kind, name",
+      "result": "AutomationRules",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "metric",
+          "column": "metric",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "operator",
+          "column": "operator",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "threshold",
+          "column": "threshold",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action",
+          "column": "action",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "column": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "state",
+          "column": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lastValue",
+          "column": "last_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updatedEpoch",
+          "column": "updated_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_update_rule",
+      "sql": "UPDATE automation_rules\nSET enabled = ?, state = ?, last_value = ?,\n    updated_epoch = ?\nWHERE id = ?",
+      "parameters": [
+        {
+          "name": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "last_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_test",
+      "sql": "INSERT INTO water_tests (parameter, value, unit, tested_at, note)\nVALUES (?, ?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "tested_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_tests",
+      "sql": "SELECT id, parameter, value, unit, tested_at, COALESCE(note, '') AS note\nFROM water_tests ORDER BY tested_at DESC, id DESC LIMIT 200",
+      "result": "WaterTests",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "parameter",
+          "column": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value",
+          "column": "value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "testedAt",
+          "column": "tested_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_set_mode",
+      "sql": "INSERT INTO aquarium_modes (name, active_until_epoch, note)\nVALUES (?, ?, ?)\nON CONFLICT(name) DO UPDATE SET\n    active_until_epoch = excluded.active_until_epoch,\n    note = excluded.note",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "active_until_epoch",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_get_modes",
+      "sql": "SELECT name, active_until_epoch, COALESCE(note, '') AS note\nFROM aquarium_modes ORDER BY name",
+      "result": "AquariumModes",
+      "fields": [
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "activeUntilEpoch",
+          "column": "active_until_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_event",
+      "sql": "INSERT INTO system_events (severity, kind, message, created_epoch)\nVALUES (?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "severity",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "created_epoch",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_events",
+      "sql": "SELECT id, severity, kind, message, created_epoch\nFROM system_events ORDER BY created_epoch DESC, id DESC LIMIT 200",
+      "result": "SystemEvents",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "severity",
+          "column": "severity",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "column": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "createdEpoch",
+          "column": "created_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_widget",
+      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "method",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "points",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "created_epoch",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_widgets",
+      "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, created_epoch\nFROM widgets ORDER BY title",
+      "result": "Widgets",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "title",
+          "column": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "sourceKind",
+          "column": "source_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "column": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "method",
+          "column": "method",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "points",
+          "column": "points",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "createdEpoch",
+          "column": "created_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_update_widget",
+      "sql": "UPDATE widgets SET title = ?, kind = ?, source_kind = ?,\n    source = ?, method = ?, unit = ?, points = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "method",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "points",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_widget",
+      "sql": "DELETE FROM widgets WHERE id = ?",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_widget_value",
+      "sql": "INSERT INTO widget_values (widget_id, value_text, value_milli, recorded_epoch)\nVALUES (?, ?, ?, ?)",
+      "parameters": [
+        {
+          "name": "widget_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value_text",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "recorded_epoch",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_widget_values",
+      "sql": "SELECT * FROM widget_values WHERE widget_id = ?\nORDER BY recorded_epoch DESC, id DESC LIMIT 100",
+      "parameters": [
+        {
+          "name": "widget_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "WidgetValues",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "widgetId",
+          "column": "widget_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "valueText",
+          "column": "value_text",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "valueMilli",
+          "column": "value_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "recordedEpoch",
+          "column": "recorded_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_latest_widget_value",
+      "sql": "SELECT id, widget_id, value_text, value_milli, recorded_epoch\nFROM widget_values WHERE widget_id = ?\nORDER BY recorded_epoch DESC, id DESC LIMIT 1",
+      "parameters": [
+        {
+          "name": "widget_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "WidgetValues",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "widgetId",
+          "column": "widget_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "valueText",
+          "column": "value_text",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "valueMilli",
+          "column": "value_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "recordedEpoch",
+          "column": "recorded_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,11 @@
+module:
+  name: aquarium-tests
+  type: rho
+  version: 0.1.0
+
+main: aquarium_test.rho
+
+build:
+  language: c
+  targets:
+    - c

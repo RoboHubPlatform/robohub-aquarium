@@ -88,6 +88,78 @@ struct ListCompletionsRow {
     note: string
 }
 
+// Equipment the application can call, read or simulate. Without a board a device is still a row with a state and the last value it reported.
+struct Devices {
+    id: i64
+    name: string
+    kind: string
+    state: string
+    lastValue: string
+    updatedEpoch: i64
+}
+
+// A rule is a metric, an operator and an action. The engine evaluates it when a value is fed in; the hardware binding can be added without changing the rule.
+struct AutomationRules {
+    id: i64
+    name: string
+    kind: string
+    metric: string
+    operator: string
+    threshold: string
+    action: string
+    enabled: i64
+    state: string
+    lastValue: string
+    updatedEpoch: i64
+}
+
+// Manual water tests, the chemistry log.
+struct WaterTests {
+    id: i64
+    parameter: string
+    value: string
+    unit: string
+    testedAt: string
+    note: string
+}
+
+// Operational modes with an expiry: water change, feeding, and so on.
+struct AquariumModes {
+    name: string
+    activeUntilEpoch: i64
+    note: string
+}
+
+// Append-only audit trail. A state change, a manual override, a trip.
+struct SystemEvents {
+    id: i64
+    severity: string
+    kind: string
+    message: string
+    createdEpoch: i64
+}
+
+// A dashboard widget. numeric shows the last value; chart shows the last `points` values as a sparkline. source_kind is manual or url.
+struct Widgets {
+    id: i64
+    title: string
+    kind: string
+    sourceKind: string
+    source: string
+    method: string
+    unit: string
+    points: i64
+    createdEpoch: i64
+}
+
+struct WidgetValues {
+    id: i64
+    widgetId: i64
+    valueText: string
+    valueMilli: i64
+    recordedEpoch: i64
+}
+
 // What is on hand, how much of it, and when to reorder.
 struct Items {
     id: i64

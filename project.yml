@@ -12,7 +12,7 @@ targets:
     ports:
       - logemit
     api:
-      public_paths: "/, /expenses, /scheduler, /api/scheduler"
+      public_paths: "/, /expenses, /scheduler, /api/scheduler, /widgets, /api/widgets"
     files:
       - path: app.go
         role: implementation

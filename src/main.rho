@@ -7,6 +7,8 @@ include "db/models.rho"
 include "db/queries.rho"
 include "../../../modules/inventory/src/main.rho"
 include "../../../modules/scheduler/src/main.rho"
+include "../../../modules/widgets/src/main.rho"
+include "aquarium.rho"
 
 import std.sql
 import std.web.http
@@ -14,6 +16,19 @@ import std.web.template
 import rho.log
 
 route GET "/" => aquarium_home
+route GET "/equipment" => equipment_page
+route POST "/equipment/add" => equipment_add
+route POST "/equipment/state" => equipment_state
+route POST "/equipment/value" => equipment_value
+route GET "/automation" => automation_page
+route POST "/automation/add" => automation_add
+route POST "/automation/simulate" => automation_simulate
+route GET "/chemistry" => chemistry_page
+route POST "/chemistry/add" => chemistry_add
+route GET "/modes" => modes_page
+route POST "/modes/start" => modes_start
+route POST "/modes/stop" => modes_stop
+route GET "/events" => events_page
 
 fn aquarium_keeper_link() string {
     let port: string = getenv("RHO_KEEPER_PORT")
@@ -25,7 +40,8 @@ fn aquarium_keeper_link() string {
 }
 
 fn aquarium_home(req: Request) Response {
-    let body: string = template_fill(template_get("home"), vars("", ""))
+    let body: string = template_fill(template_get("home"),
+        vars("widgets", widgets_dashboard_cards()))
     let document: string = template_fill(template_get("layout"),
         vars("title", "Aquarium") + vars("body", body) +
         vars("keeper", aquarium_keeper_link()))
