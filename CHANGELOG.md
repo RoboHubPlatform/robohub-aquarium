@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.6] - 2026-11-03
+
+The switch card shows one switch (its text is no longer drawn as a second
+track), and reconnecting the event stream starts from the current state rather
+than replaying old events.
+
 ## [0.2.5] - 2026-11-03
 
 The dashboard's switch press no longer assumes a JSON reply: an older cached
