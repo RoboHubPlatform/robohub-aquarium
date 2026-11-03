@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5] - 2026-11-03
+
+The dashboard's switch press no longer assumes a JSON reply: an older cached
+page that posts the form normally is followed by a reload instead of a JSON
+parse error. Dashboard pages are served with no-store so the live script is not
+cached.
+
 ## [0.2.4] - 2026-11-03
 
 The dashboard is reactive: widgets listen to the widgets SSE stream and refresh

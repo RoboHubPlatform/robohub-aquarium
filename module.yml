@@ -8,7 +8,7 @@
 module:
   name: aquarium
   type: rho
-  version: 0.2.4
+  version: 0.2.5
   description: >
     The RoboHub aquarium controller: water chemistry, equipment, schedules and
     the inventory of what keeps them running.
