@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.4] - 2026-11-03
+
+The dashboard is reactive: widgets listen to the widgets SSE stream and refresh
+device states in the background, so an externally switched plug updates without
+a page reload. A dashboard switch press updates the control in place.
+
 ## [0.2.3] - 2026-11-03
 
 The dashboard keeps its full menu everywhere, offers **+ Add widget** beside the

@@ -57,3 +57,8 @@ Aquarium reads the gateway's `/api/v1/devices` and offers every device in the
 **Mesh device** selector. A
 Switch widget on a device calls the gateway's switch endpoint with the new
 state, so the plug can be turned on and off from the dashboard.
+
+
+The dashboard listens to the widgets event stream and refreshes the device
+states in the background, so a plug that is switched elsewhere changes its
+switch card without a page reload.
