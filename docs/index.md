@@ -18,6 +18,8 @@ SQL database and the workspace the records live in.
 The home page is a dashboard: widgets are cards, and the equipment, automation,
 chemistry and mode pages are the framework the board will drive later.
 
+![Aquarium dashboard](./images/dashboard.jpg)
+
 - **Equipment** — devices with a state and a last value. A device can be switched
   and can report a value; the same row becomes a real pump, light or heater when
   a node binds it.
@@ -39,7 +41,25 @@ All forms are cards: a semi-opaque panel over the aquarium background, with the
 same colours on every module page.
 
 
+## Inventory and expenses
+
+![Inventory and expenses](./images/inventory.jpg)
+
+The inventory module's pages are under `/expenses`: what is on the shelf, what
+it cost and when to reorder.
+
+
+## Scheduler
+
+![Scheduler](./images/scheduler.jpg)
+
+The scheduler's chores are under `/scheduler`, with its API under
+`/api/scheduler`.
+
+
 ## Plug switch widget
+
+![Widget manager and switch card](./images/widgets.jpg)
 
 A Shelly Plug M Gen3 registered on a gateway can be driven from the aquarium
 dashboard with a **Switch** widget. Point the widget at the gateway's device
