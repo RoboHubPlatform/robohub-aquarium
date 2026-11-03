@@ -122,6 +122,10 @@
       el.href = location.protocol + "//" + location.hostname + ":" + port + "/";
     }
   });
+  document.querySelectorAll(".local-time[data-s]").forEach(function (el) {
+    var seconds = Number(el.getAttribute("data-s"));
+    if (seconds > 0) { el.textContent = new Date(seconds * 1000).toLocaleString(); }
+  });
 })();
 </script>
 
@@ -138,27 +142,27 @@
     if (label) { label.textContent = on ? 'On' : 'Off'; }
   }
 
-  document.querySelectorAll('form.widget-press').forEach(function (form) {
-    form.addEventListener('submit', function (event) {
-      event.preventDefault();
-      // FormData defaults to multipart; the Rho handler reads
-      // application/x-www-form-urlencoded, so encode it explicitly.
-      var fields = new URLSearchParams(new FormData(form));
-      fetch(form.action, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: fields.toString()
+  document.addEventListener('submit', function (event) {
+    var form = event.target.closest ? event.target.closest('form.widget-press') : null;
+    if (!form) { return; }
+    event.preventDefault();
+    // FormData defaults to multipart; the Rho handler reads
+    // application/x-www-form-urlencoded, so encode it explicitly.
+    var fields = new URLSearchParams(new FormData(form));
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: fields.toString()
+    })
+      .then(function (response) { return response.text(); })
+      .then(function (text) {
+        var result = {};
+        try { result = JSON.parse(text); }
+        catch (error) { location.reload(); return; }
+        var id = form.querySelector('[name="id"]').value;
+        if (result.state) { updateSwitch(id, result.state); }
       })
-        .then(function (response) { return response.text(); })
-        .then(function (text) {
-          var result = {};
-          try { result = JSON.parse(text); }
-          catch (error) { location.reload(); return; }
-          var id = form.querySelector('[name="id"]').value;
-          if (result.state) { updateSwitch(id, result.state); }
-        })
-        .catch(function () { location.reload(); });
-    });
+      .catch(function () { location.reload(); });
   });
 
   try {
@@ -167,6 +171,8 @@
       var parts = message.data.split(':');
       if (parts.length === 3 && parts[0] === 'widget') {
         updateSwitch(parts[1], parts[2]);
+      } else if (parts[0] === 'cards') {
+        reloadCards();
       }
     };
   } catch (error) {
@@ -186,8 +192,24 @@
       .catch(function () {});
   }
 
+  function reloadCards() {
+    fetch('/widgets/cards?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var grid = document.querySelector('.widget-grid');
+        if (grid) { grid.outerHTML = html; }
+      })
+      .catch(function () {});
+  }
+
   function refresh() {
-    fetch('/widgets/refresh', { method: 'POST' }).then(syncFromApi).catch(syncFromApi);
+    fetch('/widgets/refresh', { method: 'POST' })
+      .then(function (response) { return response.json(); })
+      .then(function (result) {
+        if (result.updated > 0) { syncFromApi(); }
+        if (result.changed > 0) { reloadCards(); }
+      })
+      .catch(reloadCards);
   }
   syncFromApi();
   refresh();

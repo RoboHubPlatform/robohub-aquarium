@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.8] - 2026-11-03
+
+The widget editor lists the Mesh project's inputs and outputs, not only gateway
+devices: modules and sensors can feed numbers, charts and tables, and a plug can
+feed a switch or show its power. The list is filtered by the widget kind and the
+signal's direction, and a chosen source fills its unit. The dashboard has a
+Table widget with a settable row count.
+
 ## [0.2.7] - 2026-11-03
 
 Widget switches are correct on the first paint: the dashboard syncs the gateway

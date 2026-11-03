@@ -43,7 +43,7 @@ fn aquarium_keeper_link() string {
 
 fn aquarium_home(req: Request) Response {
     let body: string = template_fill(template_get("home"),
-        vars("widgets", widgets_dashboard_cards()))
+        vars("widgets", widgets_dashboard_cards(true)))
     let document: string = template_fill(template_get("layout"),
         vars("title", "Aquarium") + vars("body", body) +
         vars("keeper", aquarium_keeper_link()))

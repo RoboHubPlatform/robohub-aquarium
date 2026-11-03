@@ -34,8 +34,10 @@ chemistry and mode pages are the framework the board will drive later.
 - **Events** — the append-only audit trail of overrides, trips, modes and
   automation.
 
-The widgets module gives the dashboard number, chart, button and switch cards.
-A switch calls its configured hook with the new state and shows it in the card.
+The widgets module gives the dashboard number, chart, table, button and switch
+cards. A switch calls its configured hook with the new state and shows it in the
+card; a table shows the latest values as rows, with the point count setting how
+many rows.
 
 All forms are cards: a semi-opaque panel over the aquarium background, with the
 same colours on every module page.
@@ -62,10 +64,15 @@ The scheduler's chores are under `/scheduler`, with its API under
 ![Widget manager and switch card](./images/widgets.jpg)
 
 A Shelly Plug M Gen3 registered on a gateway can be driven from the aquarium
-dashboard with a **Switch** widget. Point the widget at the gateway's device
-switch URL (`http://gateway/api/v1/devices/1/switch`, method POST); pressing the
-widget sends `state=on` or `state=off`. The gateway polls the plug over HTTP RPC
-and keeps the state and power figure.
+dashboard with a **Switch** widget. In **Mesh source** choose the plug's
+**Switch**; the URL, method and unit are filled from Mesh. Pressing the widget
+sends `state=on` or `state=off`. The gateway polls the plug over HTTP RPC and
+keeps the state and power figure.
+
+The same plug has an input signal, **Power**, which a number, chart or table
+widget can show in watts. A temperature module is an input only, so it is not
+offered to a switch widget. The source list is filtered by both the widget kind
+and the signal's direction.
 
 
 ## Settings and Mesh devices
@@ -73,10 +80,12 @@ and keeps the state and power figure.
 `/settings` names the Mesh URL and the Mesh project. Aquarium asks Mesh for that
 project's gateway (`/mesh/api/projects/{project}/gateway`) and stores the
 returned gateway address automatically. When a widget is created or edited,
-Aquarium reads the gateway's `/api/v1/devices` and offers every device in the
-**Mesh device** selector. A
-Switch widget on a device calls the gateway's switch endpoint with the new
-state, so the plug can be turned on and off from the dashboard.
+Aquarium reads the project's sources (`/mesh/api/projects/{project}/sources`)
+and offers the signals of its devices, modules and sensors in the **Mesh
+source** selector. Each source carries its direction, unit and the widget kinds
+it can feed; the selector shows only the ones the current kind can use. A
+Switch widget on a device calls the source's action endpoint with the new state,
+so the plug can be turned on and off from the dashboard.
 
 
 The dashboard listens to the widgets event stream, refreshes device states in
