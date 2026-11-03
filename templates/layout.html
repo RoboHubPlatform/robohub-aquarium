@@ -68,7 +68,7 @@
   .widget-card h3 { margin: 0 0 .4rem; font-family: var(--serif); font-weight: 500; font-size: 1rem; }
   .widget-value { font-family: var(--serif); font-size: 1.9rem; color: var(--gold); }
   .spark { width: 100%; height: 54px; display: block; margin: .4rem 0; }
-  .switch { display: inline-flex; align-items: center; gap: .45rem; background: transparent; color: var(--muted); border: 1px solid var(--line); padding: .35rem .6rem; }
+  .switch { cursor: pointer; touch-action: manipulation; display: inline-flex; align-items: center; gap: .45rem; background: transparent; color: var(--muted); border: 1px solid var(--line); padding: .35rem .6rem; }
   .switch span:first-child { width: 1.5rem; height: .85rem; border-radius: 999px; background: rgba(255,255,255,.15); position: relative; display: inline-block; }
   .switch span:first-child::after { content: ""; position: absolute; top: .1rem; left: .1rem; width: .65rem; height: .65rem; border-radius: 50%; background: var(--muted); transition: left .15s ease; }
   .switch.on { color: var(--teal); border-color: var(--teal); }
@@ -138,18 +138,17 @@
     if (label) { label.textContent = on ? 'On' : 'Off'; }
   }
 
-  var events = new EventSource('/widgets/events');
-  events.onmessage = function (message) {
-    var parts = message.data.split(':');
-    if (parts.length === 3 && parts[0] === 'widget') {
-      updateSwitch(parts[1], parts[2]);
-    }
-  };
-
   document.querySelectorAll('form.widget-press').forEach(function (form) {
     form.addEventListener('submit', function (event) {
       event.preventDefault();
-      fetch(form.action, { method: 'POST', body: new FormData(form) })
+      // FormData defaults to multipart; the Rho handler reads
+      // application/x-www-form-urlencoded, so encode it explicitly.
+      var fields = new URLSearchParams(new FormData(form));
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: fields.toString()
+      })
         .then(function (response) { return response.text(); })
         .then(function (text) {
           var result = {};
@@ -157,13 +156,40 @@
           catch (error) { location.reload(); return; }
           var id = form.querySelector('[name="id"]').value;
           if (result.state) { updateSwitch(id, result.state); }
-        });
+        })
+        .catch(function () { location.reload(); });
     });
   });
 
-  function refresh() {
-    fetch('/widgets/refresh', { method: 'POST' });
+  try {
+    var events = new EventSource('/widgets/events');
+    events.onmessage = function (message) {
+      var parts = message.data.split(':');
+      if (parts.length === 3 && parts[0] === 'widget') {
+        updateSwitch(parts[1], parts[2]);
+      }
+    };
+  } catch (error) {
+    // The switch still posts without the stream.
   }
+
+  function syncFromApi() {
+    fetch('/api/widgets?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (response) { return response.json(); })
+      .then(function (items) {
+        items.forEach(function (widget) {
+          if (widget.kind === 'toggle' && widget.latest) {
+            updateSwitch(String(widget.id), widget.latest);
+          }
+        });
+      })
+      .catch(function () {});
+  }
+
+  function refresh() {
+    fetch('/widgets/refresh', { method: 'POST' }).then(syncFromApi).catch(syncFromApi);
+  }
+  syncFromApi();
   refresh();
   setInterval(refresh, 2000);
 })();

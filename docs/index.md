@@ -59,6 +59,6 @@ Switch widget on a device calls the gateway's switch endpoint with the new
 state, so the plug can be turned on and off from the dashboard.
 
 
-The dashboard listens to the widgets event stream and refreshes the device
-states in the background, so a plug that is switched elsewhere changes its
-switch card without a page reload.
+The dashboard listens to the widgets event stream, refreshes device states in
+the background, and reads them before rendering, so a plug switched elsewhere is
+correct both on a reload and within two seconds without one.

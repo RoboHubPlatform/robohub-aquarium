@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.7] - 2026-11-03
+
+Widget switches are correct on the first paint: the dashboard syncs the gateway
+state before rendering, and still updates live through SSE with an API polling
+fallback.
+
 ## [0.2.6] - 2026-11-03
 
 The switch card shows one switch (its text is no longer drawn as a second
