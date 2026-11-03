@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2] - 2026-11-03
+
+Settings name a Mesh project, not just a Mesh URL. Aquarium asks Mesh for that
+project's gateway (`/mesh/api/projects/{project}/gateway`) and stores the
+address automatically; the widget editor then lists the devices behind that
+gateway.
+
 ## [0.2.1] - 2026-11-03
 
 A Settings page for the Mesh and gateway URLs. The widget editor reads the

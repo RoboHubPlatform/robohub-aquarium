@@ -102,21 +102,108 @@ fn aqua_setting(key: string) string {
     return aqua_trim(value)
 }
 
+fn aqua_json_string_field(text: string, key: string) string {
+    let at: i32 = rho_str_index_of(text, "\"" + key + "\":\"")
+    if at < 0 {
+        return ""
+    }
+    let start: u32 = u32(at) + u32(rho_strlen(key)) + 4
+    let rest: string = rho_str_slice(text, start, u32(rho_strlen(text)) - start)
+    let end: i32 = rho_str_index_of(rest, "\"")
+    if end < 0 {
+        return ""
+    }
+    return rho_str_slice(rest, 0, u32(end))
+}
+
+fn aqua_curl(url: string, report_name: string) string {
+    let report: string = aqua_setting_file(report_name)
+    let code: u32 = rho_exec("curl", "-fsS -m 3 " + url, report)
+    if code != 0 {
+        return ""
+    }
+    return rho_read_text(report)
+}
+
+fn aqua_refresh_gateway() string {
+    let mesh: string = aqua_setting("mesh_url")
+    let project: string = aqua_setting("mesh_project")
+    if mesh != "" && project != "" {
+        let text: string = aqua_curl(mesh + "/mesh/api/projects/" + project + "/gateway",
+            "mesh-gateway")
+        if rho_str_index_of(text, "\"available\":true") >= 0 {
+            let url: string = aqua_json_string_field(text, "url")
+            if url != "" {
+                ignore_bool(rho_write_text(aqua_setting_file("gateway_url"), url))
+                return url
+            }
+        }
+    }
+    return aqua_setting("gateway_url")
+}
+
+fn aqua_mesh_project_options(selected: string) string {
+    let mesh: string = aqua_setting("mesh_url")
+    var out: string = "<option value=\"\">Choose a Mesh project</option>"
+    if mesh == "" {
+        return out
+    }
+    let text: string = aqua_curl(mesh + "/mesh/api/projects", "mesh-projects")
+    if text == "" {
+        return out
+    }
+    var rest: string = text
+    while rho_strlen(rest) > 0 {
+        let at: i32 = rho_str_index_of(rest, "},{")
+        var object: string = ""
+        if at < 0 {
+            object = rest
+            rest = ""
+        } else {
+            object = rho_str_slice(rest, 0, u32(at) + 1)
+            rest = rho_str_slice(rest, u32(at) + 3, u32(rho_strlen(rest)) - u32(at) - 3)
+        }
+        let id: string = aqua_json_string_field(object, "id")
+        let name: string = aqua_json_string_field(object, "name")
+        if id == "" {
+            continue
+        }
+        if name == "" {
+            name = id
+        }
+        var mark: string = ""
+        if id == selected {
+            mark = " selected"
+        }
+        out = out + "<option value=\"" + escape_html(id) + "\"" + mark + ">" +
+            escape_html(name) + " (" + escape_html(id) + ")</option>"
+    }
+    return out
+}
+
 fn aqua_settings_page_message(message: string) Response {
     let notice: string = ""
     if message != "" {
         notice = "<p class=\"notice\">" + escape_html(message) + "</p>"
     }
+    let gateway: string = aqua_refresh_gateway()
+    let status: string = "<p><small>No gateway resolved yet.</small></p>"
+    if gateway != "" {
+        status = "<p><small>Gateway: <code>" + escape_html(gateway) + "</code></small></p>"
+    }
     let form: string = "<form class=\"panel-form\" method=\"post\" action=\"/settings\">" +
         "<div class=\"grid\">" +
         "<label>Mesh URL<input name=\"mesh_url\" value=\"" + escape_html(aqua_setting("mesh_url")) +
-        "\" placeholder=\"http://127.0.0.1:8478\"><small>The Mesh application that knows the gateway.</small></label>" +
-        "<label>Gateway URL (optional)<input name=\"gateway_url\" value=\"" +
-        escape_html(aqua_setting("gateway_url")) + "\" placeholder=\"http://127.0.0.1:8080\">" +
-        "<small>Used when Mesh is not set or does not answer.</small></label>" +
+        "\" placeholder=\"http://127.0.0.1:8478\"><small>The Mesh application.</small></label>" +
+        "<label>Mesh project<select name=\"mesh_project\">" +
+        aqua_mesh_project_options(aqua_setting("mesh_project")) +
+        "</select><small>The project/mesh whose gateway and devices this application uses.</small></label>" +
+        "<label>Mesh token (optional)<input name=\"mesh_token\" value=\"" +
+        escape_html(aqua_setting("mesh_token")) + "\"><small>Reserved for a protected Mesh API.</small></label>" +
         "</div><div class=\"form-actions\"><button type=\"submit\">Save settings</button></div></form>"
-    let body: string = "<h1>Settings</h1><p>How this aquarium application reaches the Mesh application " +
-        "and the gateway that owns its devices.</p>" + notice + form
+    let body: string = "<h1>Settings</h1><p>The Mesh project this aquarium application uses. " +
+        "Mesh serves the gateway of that project, and Aquarium stores the address automatically.</p>" +
+        notice + form + status
     return aqua_page("Settings", body)
 }
 
@@ -128,9 +215,15 @@ fn aqua_settings_save(req: Request) Response {
     let body: string = request_body(req)
     ignore_bool(rho_write_text(aqua_setting_file("mesh_url"),
         aqua_trim(aqua_form(body, "mesh_url"))))
-    ignore_bool(rho_write_text(aqua_setting_file("gateway_url"),
-        aqua_trim(aqua_form(body, "gateway_url"))))
-    return aqua_settings_page_message("Settings saved.")
+    ignore_bool(rho_write_text(aqua_setting_file("mesh_project"),
+        aqua_trim(aqua_form(body, "mesh_project"))))
+    ignore_bool(rho_write_text(aqua_setting_file("mesh_token"),
+        aqua_trim(aqua_form(body, "mesh_token"))))
+    let gateway: string = aqua_refresh_gateway()
+    if gateway == "" {
+        return aqua_settings_page_message("Settings saved, but Mesh did not return a gateway.")
+    }
+    return aqua_settings_page_message("Settings saved. Gateway: " + gateway)
 }
 
 fn aqua_db_path() string {

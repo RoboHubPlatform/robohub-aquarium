@@ -50,8 +50,10 @@ and keeps the state and power figure.
 
 ## Settings and Mesh devices
 
-`/settings` names the Mesh URL (and an optional gateway URL). When a widget is
-created or edited, Aquarium reads Mesh's `/mesh/api/gateway`, then the gateway's
-`/api/v1/devices`, and offers every device in the **Mesh device** selector. A
+`/settings` names the Mesh URL and the Mesh project. Aquarium asks Mesh for that
+project's gateway (`/mesh/api/projects/{project}/gateway`) and stores the
+returned gateway address automatically. When a widget is created or edited,
+Aquarium reads the gateway's `/api/v1/devices` and offers every device in the
+**Mesh device** selector. A
 Switch widget on a device calls the gateway's switch endpoint with the new
 state, so the plug can be turned on and off from the dashboard.
