@@ -29,6 +29,8 @@ route GET "/modes" => modes_page
 route POST "/modes/start" => modes_start
 route POST "/modes/stop" => modes_stop
 route GET "/events" => events_page
+route GET "/settings" => aqua_settings_page
+route POST "/settings" => aqua_settings_save
 
 fn aquarium_keeper_link() string {
     let port: string = getenv("RHO_KEEPER_PORT")

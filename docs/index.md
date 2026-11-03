@@ -46,3 +46,12 @@ dashboard with a **Switch** widget. Point the widget at the gateway's device
 switch URL (`http://gateway/api/v1/devices/1/switch`, method POST); pressing the
 widget sends `state=on` or `state=off`. The gateway polls the plug over HTTP RPC
 and keeps the state and power figure.
+
+
+## Settings and Mesh devices
+
+`/settings` names the Mesh URL (and an optional gateway URL). When a widget is
+created or edited, Aquarium reads Mesh's `/mesh/api/gateway`, then the gateway's
+`/api/v1/devices`, and offers every device in the **Mesh device** selector. A
+Switch widget on a device calls the gateway's switch endpoint with the new
+state, so the plug can be turned on and off from the dashboard.

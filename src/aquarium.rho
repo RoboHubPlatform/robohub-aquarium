@@ -87,6 +87,52 @@ fn aqua_hex(ch: string) u32 {
     return 0
 }
 
+fn aqua_setting_file(key: string) string {
+    let workspace: string = getenv("ROBOHUB_APP_WORKSPACE")
+    if workspace == "" {
+        workspace = getenv("HOME") + "/.rho/aquarium"
+    }
+    let dir: string = workspace + "/data"
+    ignore_u32(rho_exec("mkdir", "-p " + dir, dir + "/mkdir.txt"))
+    return dir + "/" + key
+}
+
+fn aqua_setting(key: string) string {
+    let value: string = rho_read_text(aqua_setting_file(key))
+    return aqua_trim(value)
+}
+
+fn aqua_settings_page_message(message: string) Response {
+    let notice: string = ""
+    if message != "" {
+        notice = "<p class=\"notice\">" + escape_html(message) + "</p>"
+    }
+    let form: string = "<form class=\"panel-form\" method=\"post\" action=\"/settings\">" +
+        "<div class=\"grid\">" +
+        "<label>Mesh URL<input name=\"mesh_url\" value=\"" + escape_html(aqua_setting("mesh_url")) +
+        "\" placeholder=\"http://127.0.0.1:8478\"><small>The Mesh application that knows the gateway.</small></label>" +
+        "<label>Gateway URL (optional)<input name=\"gateway_url\" value=\"" +
+        escape_html(aqua_setting("gateway_url")) + "\" placeholder=\"http://127.0.0.1:8080\">" +
+        "<small>Used when Mesh is not set or does not answer.</small></label>" +
+        "</div><div class=\"form-actions\"><button type=\"submit\">Save settings</button></div></form>"
+    let body: string = "<h1>Settings</h1><p>How this aquarium application reaches the Mesh application " +
+        "and the gateway that owns its devices.</p>" + notice + form
+    return aqua_page("Settings", body)
+}
+
+fn aqua_settings_page(req: Request) Response {
+    return aqua_settings_page_message("")
+}
+
+fn aqua_settings_save(req: Request) Response {
+    let body: string = request_body(req)
+    ignore_bool(rho_write_text(aqua_setting_file("mesh_url"),
+        aqua_trim(aqua_form(body, "mesh_url"))))
+    ignore_bool(rho_write_text(aqua_setting_file("gateway_url"),
+        aqua_trim(aqua_form(body, "gateway_url"))))
+    return aqua_settings_page_message("Settings saved.")
+}
+
 fn aqua_db_path() string {
     let workspace: string = getenv("ROBOHUB_APP_WORKSPACE")
     if workspace == "" {

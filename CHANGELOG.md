@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-11-03
+
+A Settings page for the Mesh and gateway URLs. The widget editor reads the
+device list through Mesh and the gateway and offers it as a **Mesh device**
+selection; a Switch widget can then turn a plug on and off from the dashboard.
+
 ## [0.2.0] - 2026-11-02
 
 The aquarium framework: equipment and devices, automation rules with a value
