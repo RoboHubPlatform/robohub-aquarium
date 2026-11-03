@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3] - 2026-11-03
+
+The dashboard keeps its full menu everywhere, offers **+ Add widget** beside the
+dashboard, and the switch cards are switch-first: no panel border, a larger
+switch, the title opens the widget settings, and pressing the switch stays on
+the dashboard.
+
 ## [0.2.2] - 2026-11-03
 
 Settings name a Mesh project, not just a Mesh URL. Aquarium asks Mesh for that
