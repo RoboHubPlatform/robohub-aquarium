@@ -7,6 +7,7 @@ include "db/models.rho"
 include "db/queries.rho"
 include "../../../modules/inventory/src/main.rho"
 include "../../../modules/scheduler/src/main.rho"
+include "../../../contracts/gateway/manager.rho"
 include "../../../modules/widgets/src/main.rho"
 include "aquarium.rho"
 

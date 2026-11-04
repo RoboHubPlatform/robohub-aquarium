@@ -53,6 +53,18 @@ app_modules:
     enabled: true
     version: ">=0.1.0"
 
+# The gateway provider this application uses. Aquarium does not know Mesh's
+# API; it asks the gateway contract, and this plugin answers. Another provider
+# is enabled here by name, and the settings page overrides its config through
+# gateway.conf.
+plugins:
+  - name: mesh-gateway
+    enabled: true
+    config:
+      url: "http://127.0.0.1:8478"
+      project: "default"
+      token: ""
+
 # The application has a database, so the SQL port is generated for it. The
 # tables it uses are the module's; the host's own schema may grow with the
 # aquarium domain.
