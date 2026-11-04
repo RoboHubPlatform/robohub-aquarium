@@ -13,6 +13,16 @@ targets:
       - logemit
     api:
       public_paths: "/, /expenses, /scheduler, /api/scheduler, /widgets, /api/widgets"
+    middleware:
+      - name: auth
+        options:
+          issuer: keeper
+          audience: aquarium
+          cookie: aquarium_session
+          public_key: ${RHO_HOME}/auth/public.pem
+          mode: direct
+          login_url: "/auth/login?audience=aquarium"
+          scheme: auto
     files:
       - path: app.go
         role: implementation

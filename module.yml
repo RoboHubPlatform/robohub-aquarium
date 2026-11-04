@@ -8,7 +8,7 @@
 module:
   name: aquarium
   type: rho
-  version: 0.2.8
+  version: 0.2.9
   description: >
     The RoboHub aquarium controller: water chemistry, equipment, schedules and
     the inventory of what keeps them running.
@@ -58,6 +58,12 @@ app_modules:
 # is enabled here by name, and the settings page overrides its config through
 # gateway.conf.
 plugins:
+  - name: robohub-auth
+    enabled: true
+    config:
+      issuer: keeper
+      mode: direct
+      login_url: "http://127.0.0.1:19090/auth/login"
   - name: mesh-gateway
     enabled: true
     config:

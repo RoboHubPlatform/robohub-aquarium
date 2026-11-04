@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.9] - 2026-11-04
+
+Aquarium signs in through Keeper SSO. The dashboard, widgets and settings are behind the aquarium session; outbound Mesh API calls carry a signed service JWT so widgets keep reading and driving Mesh.
+
 ## [0.2.8] - 2026-11-03
 
 The widget editor lists the Mesh project's inputs and outputs, not only gateway
