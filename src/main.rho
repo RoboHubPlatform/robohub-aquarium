@@ -34,12 +34,7 @@ route GET "/settings" => aqua_settings_page
 route POST "/settings" => aqua_settings_save
 
 fn aquarium_keeper_link() string {
-    let port: string = getenv("RHO_KEEPER_PORT")
-    if port == "" {
-        return ""
-    }
-    return "<a class=\"keeper\" href=\"#\" data-keeper-port=\"" + escape_html(port) +
-        "\">Keeper</a>"
+    return aqua_keeper_link()
 }
 
 fn aquarium_home(req: Request) Response {

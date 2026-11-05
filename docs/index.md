@@ -91,3 +91,8 @@ so the plug can be turned on and off from the dashboard.
 The dashboard listens to the widgets event stream, refreshes device states in
 the background, and reads them before rendering, so a plug switched elsewhere is
 correct both on a reload and within two seconds without one.
+
+Charts and tables bound to a Mesh source now read the Mesh telemetry history, so
+the miralis temperature chart shows a real series. Number widgets read the
+latest value from the same store. No widget needs to be recreated: the provider
+recognizes the Mesh value URLs the existing widgets already hold.

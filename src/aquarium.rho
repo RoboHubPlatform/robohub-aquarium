@@ -338,12 +338,21 @@ fn aqua_ignore_result(value: Result[u32, SqlError]) void {
 }
 
 fn aqua_keeper_link() string {
-    let port: string = getenv("RHO_KEEPER_PORT")
+    var port: string = getenv("RHO_KEEPER_PORT")
+    if port == "" {
+        // A keeper-hosted workspace is under the keeper's state; a missing
+        // environment variable there is a configuration omission, not a
+        // standalone run, so the default keeper port is the useful link.
+        let workspace: string = getenv("ROBOHUB_APP_WORKSPACE")
+        if rho_str_index_of(workspace, "/.rho/keeper/workspaces/") >= 0 {
+            port = "19090"
+        }
+    }
     if port == "" {
         return ""
     }
     return "<a class=\"keeper\" href=\"#\" data-keeper-port=\"" + escape_html(port) +
-        "\">Keeper</a>"
+        "\"><span aria-hidden=\"true\">↑</span> Keeper</a>"
 }
 
 fn aqua_page(title: string, body: string) Response {
