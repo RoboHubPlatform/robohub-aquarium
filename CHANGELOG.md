@@ -81,3 +81,9 @@ module serves `/expenses`, the scheduler serves `/scheduler` and
 `/api/scheduler`, and the widgets module serves the dashboard cards and
 `/api/widgets`. All keep their tables in the application's main SQL database and
 their records in its workspace.
+
+## [0.3.1] - 2026-11-06
+
+Fixed chart widget to parse decimal values (was showing flat line). Chart now
+requests 2 hours of history instead of 24 hours for responsiveness. Service
+token now requires mesh:default scope.
