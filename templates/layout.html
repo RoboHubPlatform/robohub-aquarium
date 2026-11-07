@@ -114,18 +114,14 @@
 </header>
 <main>{{{ body }}}</main>
 <footer class="bottombar">
-  <span>Water, light and what keeps them running.</span>
+  <span id="status-inventory">Items: —</span>
+  <span id="status-scheduler">Tasks: —</span>
+  <span id="status-widgets"></span>
   <nav>
-    <a href="/">Home</a>
     <a href="/expenses">Inventory</a>
     <a href="/scheduler">Scheduler</a>
     <a href="/widgets">Widgets</a>
-    <a href="/equipment">Equipment</a>
-    <a href="/automation">Automation</a>
-    <a href="/chemistry">Chemistry</a>
-    <a href="/modes">Modes</a>
-    <a href="/events">Events</a>
-    <a href="/settings">Settings</a>
+    <a href="/docs">Documentation</a>
     {{{ keeper }}}
   </nav>
 </footer>
@@ -141,6 +137,26 @@
     var seconds = Number(el.getAttribute("data-s"));
     if (seconds > 0) { el.textContent = new Date(seconds * 1000).toLocaleString(); }
   });
+  // status bar: inventory count, scheduler tasks, pinned widgets
+  function updateStatusBar() {
+    fetch("/api/expenses/data").then(function (r) { return r.json(); }).then(function (d) {
+      var el = document.getElementById("status-inventory");
+      if (el) { el.textContent = "Items: " + (d.item_count || 0); }
+    }).catch(function () {});
+    fetch("/api/scheduler/chores").then(function (r) { return r.json(); }).then(function (items) {
+      var el = document.getElementById("status-scheduler");
+      if (el) { el.textContent = "Tasks: " + (Array.isArray(items) ? items.length : 0); }
+    }).catch(function () {});
+    fetch("/api/widgets").then(function (r) { return r.json(); }).then(function (items) {
+      var pinned = items.filter(function (w) { return w.pinned === 1; });
+      var el = document.getElementById("status-widgets");
+      if (el) {
+        el.textContent = pinned.map(function (w) { return w.title + ": " + (w.latest || "") + " " + (w.unit || ""); }).join(" · ");
+      }
+    }).catch(function () {});
+  }
+  updateStatusBar();
+  setInterval(updateStatusBar, 5000);
 })();
 </script>
 
@@ -224,7 +240,7 @@
       .then(function (response) { return response.text(); })
       .then(function (html) {
         var grid = document.querySelector('.widget-grid');
-        if (grid) { grid.outerHTML = html; }
+        if (grid && grid.outerHTML !== html) { grid.outerHTML = html; }
       })
       .catch(function () {});
   }
@@ -240,7 +256,7 @@
   }
   syncFromApi();
   refresh();
-  setInterval(refresh, 2000);
+  setInterval(refresh, 5000);
 })();
 </script>
 </body>

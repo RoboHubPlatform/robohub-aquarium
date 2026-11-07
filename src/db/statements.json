@@ -1217,8 +1217,8 @@
     },
     {
       "name": "sql_list_widgets",
-      "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, position, size, decimals, created_epoch\nFROM widgets ORDER BY position, title",
-      "result": "ListWidgetsRow",
+      "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, position, size, decimals, pinned, created_epoch\nFROM widgets ORDER BY position, title",
+      "result": "Widgets",
       "fields": [
         {
           "name": "id",
@@ -1283,6 +1283,12 @@
         {
           "name": "decimals",
           "column": "decimals",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "pinned",
+          "column": "pinned",
           "goType": "int64",
           "integer": true
         },

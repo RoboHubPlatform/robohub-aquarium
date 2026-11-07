@@ -176,7 +176,7 @@ VALUES (:title, :kind, :source_kind, :source, :method, :unit, :points, :position
 
 -- name: list_widgets
 SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,
-       method, COALESCE(unit, '') AS unit, points, position, size, decimals, created_epoch
+       method, COALESCE(unit, '') AS unit, points, position, size, decimals, pinned, created_epoch
 FROM widgets ORDER BY position, title;
 
 -- name: update_widget

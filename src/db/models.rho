@@ -139,7 +139,8 @@ struct SystemEvents {
     createdEpoch: i64
 }
 
-struct ListWidgetsRow {
+// A dashboard widget. numeric shows the last value; chart shows the last `points` values as a sparkline. source_kind is manual or url.
+struct Widgets {
     id: i64
     title: string
     kind: string
@@ -151,6 +152,7 @@ struct ListWidgetsRow {
     position: i64
     size: string
     decimals: i64
+    pinned: i64
     createdEpoch: i64
 }
 
@@ -211,22 +213,5 @@ struct ChoreCompletions {
     completedEpoch: i64
     note: string
     createdAt: string
-}
-
-// A dashboard widget. numeric shows the last value; chart shows the last `points` values as a sparkline. source_kind is manual or url.
-struct Widgets {
-    id: i64
-    title: string
-    kind: string
-    sourceKind: string
-    source: string
-    method: string
-    unit: string
-    points: i64
-    position: i64
-    size: string
-    decimals: i64
-    pinned: i64
-    createdEpoch: i64
 }
 

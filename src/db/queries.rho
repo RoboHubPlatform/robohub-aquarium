@@ -50,7 +50,7 @@ extern fn sql_get_modes(db: SqlDb, out: Slice[AquariumModes], capacity: u32) u32
 extern fn sql_insert_event(severity: string, kind: string, message: string, created_epoch: string, db: SqlDb) u32;
 extern fn sql_list_events(db: SqlDb, out: Slice[SystemEvents], capacity: u32) u32;
 extern fn sql_insert_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) u32;
-extern fn sql_list_widgets(db: SqlDb, out: Slice[ListWidgetsRow], capacity: u32) u32;
+extern fn sql_list_widgets(db: SqlDb, out: Slice[Widgets], capacity: u32) u32;
 extern fn sql_update_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: i64, decimals: i64, id: i64, db: SqlDb) u32;
 extern fn sql_move_widget(position: i64, id: i64, db: SqlDb) u32;
 extern fn sql_resize_widget(size: string, id: i64, db: SqlDb) u32;
@@ -298,7 +298,7 @@ fn InsertWidget(title: string, kind: string, source_kind: string, source: string
     return Ok[u32, SqlError](changed)
 }
 
-fn ListWidgets(db: SqlDb, out: Slice[ListWidgetsRow], capacity: u32) Result[u32, SqlError] {
+fn ListWidgets(db: SqlDb, out: Slice[Widgets], capacity: u32) Result[u32, SqlError] {
     if capacity == 0 {
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
