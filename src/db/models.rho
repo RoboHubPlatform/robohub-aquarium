@@ -149,6 +149,9 @@ struct Widgets {
     method: string
     unit: string
     points: i64
+    position: i64
+    size: string
+    decimals: i64
     createdEpoch: i64
 }
 

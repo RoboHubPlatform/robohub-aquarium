@@ -149,6 +149,9 @@ CREATE TABLE IF NOT EXISTS widgets (
     method           TEXT NOT NULL DEFAULT 'GET',
     unit             TEXT,
     points           INTEGER NOT NULL DEFAULT 24,
+    position         INTEGER NOT NULL DEFAULT 0,
+    size             TEXT NOT NULL DEFAULT 'small',
+    decimals         INTEGER NOT NULL DEFAULT 2,
     created_epoch    INTEGER NOT NULL DEFAULT 0
 );
 

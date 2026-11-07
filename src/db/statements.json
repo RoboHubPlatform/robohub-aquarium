@@ -1155,7 +1155,7 @@
     },
     {
       "name": "sql_insert_widget",
-      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals,\n    action2_title, action2_source, action2_method, action3_title, action3_source, action3_method, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,\n    ?, ?, ?, ?, ?, ?, ?)",
       "parameters": [
         {
           "name": "title",
@@ -1193,6 +1193,51 @@
           "text": true
         },
         {
+          "name": "position",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "size",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "decimals",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action2_title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action2_source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action2_method",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action3_title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action3_source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "action3_method",
+          "goType": "string",
+          "text": true
+        },
+        {
           "name": "created_epoch",
           "goType": "string",
           "text": true
@@ -1202,7 +1247,7 @@
     },
     {
       "name": "sql_list_widgets",
-      "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, created_epoch\nFROM widgets ORDER BY title",
+      "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, position, size, decimals, created_epoch\nFROM widgets ORDER BY position, title",
       "result": "Widgets",
       "fields": [
         {
@@ -1254,6 +1299,24 @@
           "integer": true
         },
         {
+          "name": "position",
+          "column": "position",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "size",
+          "column": "size",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "decimals",
+          "column": "decimals",
+          "goType": "int64",
+          "integer": true
+        },
+        {
           "name": "createdEpoch",
           "column": "created_epoch",
           "goType": "int64",
@@ -1263,7 +1326,7 @@
     },
     {
       "name": "sql_update_widget",
-      "sql": "UPDATE widgets SET title = ?, kind = ?, source_kind = ?,\n    source = ?, method = ?, unit = ?, points = ? WHERE id = ?",
+      "sql": "UPDATE widgets SET title = ?, kind = ?, source_kind = ?,\n    source = ?, method = ?, unit = ?, points = ?, decimals = ? WHERE id = ?",
       "parameters": [
         {
           "name": "title",
@@ -1299,6 +1362,79 @@
           "name": "points",
           "goType": "int64",
           "integer": true
+        },
+        {
+          "name": "decimals",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_move_widget",
+      "sql": "UPDATE widgets SET position = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "position",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_resize_widget",
+      "sql": "UPDATE widgets SET size = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "size",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_widget_state2",
+      "sql": "UPDATE widgets SET state2 = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_widget_state3",
+      "sql": "UPDATE widgets SET state3 = ? WHERE id = ?",
+      "parameters": [
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
         },
         {
           "name": "id",
