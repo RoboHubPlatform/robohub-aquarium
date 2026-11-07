@@ -171,10 +171,8 @@ SELECT id, severity, kind, message, created_epoch
 FROM system_events ORDER BY created_epoch DESC, id DESC LIMIT 200;
 
 -- name: insert_widget
-INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals,
-    action2_title, action2_source, action2_method, action3_title, action3_source, action3_method, created_epoch)
-VALUES (:title, :kind, :source_kind, :source, :method, :unit, :points, :position, :size, :decimals,
-    :action2_title, :action2_source, :action2_method, :action3_title, :action3_source, :action3_method, :created_epoch);
+INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch)
+VALUES (:title, :kind, :source_kind, :source, :method, :unit, :points, :position, :size, :decimals, :created_epoch);
 
 -- name: list_widgets
 SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,
@@ -191,11 +189,8 @@ UPDATE widgets SET position = :position WHERE id = :id;
 -- name: resize_widget
 UPDATE widgets SET size = :size WHERE id = :id;
 
--- name: update_widget_state2
-UPDATE widgets SET state2 = :state WHERE id = :id;
-
--- name: update_widget_state3
-UPDATE widgets SET state3 = :state WHERE id = :id;
+-- name: pin_widget
+UPDATE widgets SET pinned = :pinned WHERE id = :id;
 
 -- name: delete_widget
 DELETE FROM widgets WHERE id = :id;

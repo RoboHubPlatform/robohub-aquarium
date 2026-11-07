@@ -49,13 +49,12 @@ extern fn sql_set_mode(name: string, active_until_epoch: string, note: string, d
 extern fn sql_get_modes(db: SqlDb, out: Slice[AquariumModes], capacity: u32) u32;
 extern fn sql_insert_event(severity: string, kind: string, message: string, created_epoch: string, db: SqlDb) u32;
 extern fn sql_list_events(db: SqlDb, out: Slice[SystemEvents], capacity: u32) u32;
-extern fn sql_insert_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, action2_title: string, action2_source: string, action2_method: string, action3_title: string, action3_source: string, action3_method: string, created_epoch: string, db: SqlDb) u32;
-extern fn sql_list_widgets(db: SqlDb, out: Slice[Widgets], capacity: u32) u32;
+extern fn sql_insert_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) u32;
+extern fn sql_list_widgets(db: SqlDb, out: Slice[ListWidgetsRow], capacity: u32) u32;
 extern fn sql_update_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: i64, decimals: i64, id: i64, db: SqlDb) u32;
 extern fn sql_move_widget(position: i64, id: i64, db: SqlDb) u32;
 extern fn sql_resize_widget(size: string, id: i64, db: SqlDb) u32;
-extern fn sql_update_widget_state2(state: string, id: i64, db: SqlDb) u32;
-extern fn sql_update_widget_state3(state: string, id: i64, db: SqlDb) u32;
+extern fn sql_pin_widget(pinned: i64, id: i64, db: SqlDb) u32;
 extern fn sql_delete_widget(id: i64, db: SqlDb) u32;
 extern fn sql_insert_widget_value(widget_id: string, value_text: string, value_milli: string, recorded_epoch: string, db: SqlDb) u32;
 extern fn sql_list_widget_values(widget_id: i64, db: SqlDb, out: Slice[WidgetValues], capacity: u32) u32;
@@ -294,12 +293,12 @@ fn ListEvents(db: SqlDb, out: Slice[SystemEvents], capacity: u32) Result[u32, Sq
     return Ok[u32, SqlError](wrote)
 }
 
-fn InsertWidget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, action2_title: string, action2_source: string, action2_method: string, action3_title: string, action3_source: string, action3_method: string, created_epoch: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_widget(title, kind, source_kind, source, method, unit, points, position, size, decimals, action2_title, action2_source, action2_method, action3_title, action3_source, action3_method, created_epoch, db)
+fn InsertWidget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_widget(title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch, db)
     return Ok[u32, SqlError](changed)
 }
 
-fn ListWidgets(db: SqlDb, out: Slice[Widgets], capacity: u32) Result[u32, SqlError] {
+fn ListWidgets(db: SqlDb, out: Slice[ListWidgetsRow], capacity: u32) Result[u32, SqlError] {
     if capacity == 0 {
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
@@ -325,13 +324,8 @@ fn ResizeWidget(size: string, id: i64, db: SqlDb) Result[u32, SqlError] {
     return Ok[u32, SqlError](changed)
 }
 
-fn UpdateWidgetState2(state: string, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_widget_state2(state, id, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn UpdateWidgetState3(state: string, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_widget_state3(state, id, db)
+fn PinWidget(pinned: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_pin_widget(pinned, id, db)
     return Ok[u32, SqlError](changed)
 }
 

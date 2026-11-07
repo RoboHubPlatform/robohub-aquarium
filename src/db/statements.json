@@ -1155,7 +1155,7 @@
     },
     {
       "name": "sql_insert_widget",
-      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals,\n    action2_title, action2_source, action2_method, action3_title, action3_source, action3_method, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,\n    ?, ?, ?, ?, ?, ?, ?)",
+      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       "parameters": [
         {
           "name": "title",
@@ -1208,36 +1208,6 @@
           "text": true
         },
         {
-          "name": "action2_title",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action2_source",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action2_method",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action3_title",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action3_source",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action3_method",
-          "goType": "string",
-          "text": true
-        },
-        {
           "name": "created_epoch",
           "goType": "string",
           "text": true
@@ -1248,7 +1218,7 @@
     {
       "name": "sql_list_widgets",
       "sql": "SELECT id, title, kind, source_kind, COALESCE(source, '') AS source,\n       method, COALESCE(unit, '') AS unit, points, position, size, decimals, created_epoch\nFROM widgets ORDER BY position, title",
-      "result": "Widgets",
+      "result": "ListWidgetsRow",
       "fields": [
         {
           "name": "id",
@@ -1411,30 +1381,13 @@
       "affected": true
     },
     {
-      "name": "sql_update_widget_state2",
-      "sql": "UPDATE widgets SET state2 = ? WHERE id = ?",
+      "name": "sql_pin_widget",
+      "sql": "UPDATE widgets SET pinned = ? WHERE id = ?",
       "parameters": [
         {
-          "name": "state",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "id",
+          "name": "pinned",
           "goType": "int64",
           "integer": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_update_widget_state3",
-      "sql": "UPDATE widgets SET state3 = ? WHERE id = ?",
-      "parameters": [
-        {
-          "name": "state",
-          "goType": "string",
-          "text": true
         },
         {
           "name": "id",
