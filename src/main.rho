@@ -39,10 +39,16 @@ fn aquarium_keeper_link() string {
 }
 
 fn aquarium_docs(req: Request) Response {
-    let body: string = "<h1>Documentation</h1><p>Module documentation for this application.</p>" +
-        "<ul><li><a href=\"/expenses\">Inventory</a></li>" +
-        "<li><a href=\"/scheduler\">Scheduler</a></li>" +
-        "<li><a href=\"/widgets\">Widgets</a></li></ul>"
+    let root: string = getenv("ROBOHUB_WORKSPACE")
+    var path: string = "applications/aquarium/docs/index.md"
+    if root != "" {
+        path = root + "/applications/aquarium/docs/index.md"
+    }
+    var content: string = "No documentation found."
+    if rho_path_exists(path) {
+        content = rho_read_text(path)
+    }
+    let body: string = "<h1>Documentation</h1><pre class=\"docs\">" + escape_html(content) + "</pre>"
     let document: string = template_fill(template_get("layout"),
         vars("title", "Documentation") + vars("body", body) +
         vars("keeper", aquarium_keeper_link()) +
