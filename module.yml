@@ -91,6 +91,10 @@ deps:
     robohub-auth: ">=0.1.0"
     mesh-gateway: ">=0.1.0"
 
+deploy:
+  port: 8480
+  service: aquarium
+
 docs:
   title: Aquarium
   section: applications
