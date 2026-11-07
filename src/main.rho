@@ -62,6 +62,8 @@ fn aquarium_home(req: Request) Response {
         vars("widgets", widgets_dashboard_cards(true)))
     let document: string = template_fill(template_get("layout"),
         vars("title", "Aquarium") + vars("body", body) +
-        vars("keeper", aquarium_keeper_link()))
+        vars("keeper", aquarium_keeper_link()) +
+        vars("notifications", notification_embed()) +
+        vars("forms_style", forms_style()))
     return html(status_ok(), document)
 }
