@@ -17,6 +17,7 @@ import std.web.template
 import rho.log
 
 route GET "/" => aquarium_home
+route GET "/docs" => aquarium_docs
 route GET "/equipment" => equipment_page
 route POST "/equipment/add" => equipment_add
 route POST "/equipment/state" => equipment_state
@@ -35,6 +36,19 @@ route POST "/settings" => aqua_settings_save
 
 fn aquarium_keeper_link() string {
     return aqua_keeper_link()
+}
+
+fn aquarium_docs(req: Request) Response {
+    let body: string = "<h1>Documentation</h1><p>Module documentation for this application.</p>" +
+        "<ul><li><a href=\"/expenses\">Inventory</a></li>" +
+        "<li><a href=\"/scheduler\">Scheduler</a></li>" +
+        "<li><a href=\"/widgets\">Widgets</a></li></ul>"
+    let document: string = template_fill(template_get("layout"),
+        vars("title", "Documentation") + vars("body", body) +
+        vars("keeper", aquarium_keeper_link()) +
+        vars("notifications", notification_embed()) +
+        vars("forms_style", forms_style()))
+    return html(status_ok(), document)
 }
 
 fn aquarium_home(req: Request) Response {
