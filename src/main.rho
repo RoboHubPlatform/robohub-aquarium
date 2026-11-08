@@ -2,6 +2,7 @@ module aquarium
 
 // The aquarium host. It owns the router and the port; the inventory module
 // included here adds its own routes under /expenses.
+include "../../../modules/settings/src/main.rho"
 include "../../../modules/i18n/src/main.rho"
 include "storage.rho"
 include "db/models.rho"

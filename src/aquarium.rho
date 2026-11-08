@@ -97,9 +97,27 @@ fn aqua_setting_file(key: string) string {
     return dir + "/" + key
 }
 
+fn aqua_setting_key(key: string) string {
+    if rho_str_eq(key, "mesh_url") { return "gateway.url" }
+    if rho_str_eq(key, "mesh_project") { return "gateway.project" }
+    if rho_str_eq(key, "mesh_token") { return "gateway.token" }
+    if rho_str_eq(key, "gateway_url") { return "gateway.resolved" }
+    return "gateway." + key
+}
+
 fn aqua_setting(key: string) string {
-    let value: string = rho_read_text(aqua_setting_file(key))
-    return aqua_trim(value)
+    let mapped: string = aqua_setting_key(key)
+    let value: string = settings_get(mapped, "")
+    if value != "" {
+        return value
+    }
+    // Older installs kept one file per key; read it once so an upgrade keeps
+    // the values a person already set.
+    return aqua_trim(rho_read_text(aqua_setting_file(key)))
+}
+
+fn aqua_setting_set(key: string, value: string) void {
+    settings_set(aqua_setting_key(key), aqua_trim(value))
 }
 
 fn aqua_json_string_field(text: string, key: string) string {
@@ -194,16 +212,91 @@ fn aqua_gateway_project_choices() string {
     return out
 }
 
-fn aqua_settings_page_message(req: Request, message: string) Response {
-    let notice: string = ""
-    if message != "" {
-        notice = "<p class=\"notice\">" + escape_html(message) + "</p>"
+fn aqua_settings_tab(req: Request) string {
+    let tab: string = request_query_param(req, "tab")
+    if tab == "" { return "gateway" }
+    if rho_str_eq(tab, "inventory") || rho_str_eq(tab, "scheduler") ||
+        rho_str_eq(tab, "widgets") || rho_str_eq(tab, "configuration") {
+        return tab
     }
-    aqua_ensure_gateway_conf()
-    let gateway: string = aqua_refresh_gateway()
-    let status: string = "<p><small>No gateway resolved yet.</small></p>"
-    if gateway != "" {
-        status = "<p><small>Gateway: <code>" + escape_html(gateway) + "</code></small></p>"
+    return "gateway"
+}
+
+fn aqua_settings_nav(req: Request, active: string) string {
+    var out: string = "<nav class=\"settings-tabs\">"
+    let ids: string = "gateway,inventory,scheduler,widgets,configuration"
+    let keys: string = "settings.tab.gateway,settings.tab.inventory,settings.tab.scheduler,settings.tab.widgets,settings.tab.configuration"
+    while ids != "" {
+        let id_at: i32 = rho_str_index_of(ids, ",")
+        let key_at: i32 = rho_str_index_of(keys, ",")
+        var id: string = ids
+        var key: string = keys
+        if id_at < 0 { ids = "" } else {
+            id = rho_str_slice(ids, 0, u32(id_at))
+            ids = rho_str_slice(ids, u32(id_at) + 1, u32(rho_strlen(ids)) - u32(id_at) - 1)
+        }
+        if key_at < 0 { keys = "" } else {
+            key = rho_str_slice(keys, 0, u32(key_at))
+            keys = rho_str_slice(keys, u32(key_at) + 1, u32(rho_strlen(keys)) - u32(key_at) - 1)
+        }
+        var css: string = ""
+        if rho_str_eq(id, active) { css = " class=\"active\"" }
+        out = out + "<a href=\"/settings?tab=" + id + "\"" + css + ">" + i18n_t(req, key) + "</a>"
+    }
+    return out + "</nav>"
+}
+
+fn aqua_settings_form(req: Request, tab: string) string {
+    if rho_str_eq(tab, "inventory") {
+        var fields: FormField[4]
+        fields[0] = FormField{ "currency", "select", i18n_t(req, "settings.inventory.currency"), "",
+            "", false, "", "RON|RON,EUR|EUR,USD|USD",
+            settings_get("inventory.currency", "RON"), "", "" }
+        fields[1] = FormField{ "default_unit", "text", i18n_t(req, "settings.inventory.unit"), "",
+            "unit, kg, L", false, "", "", settings_get("inventory.default_unit", ""), "", "" }
+        fields[2] = FormField{ "decimals", "select", i18n_t(req, "settings.inventory.decimals"), "",
+            "", false, "", "0|0,1|0.1,2|0.01,3|0.001",
+            settings_get("inventory.decimals", "2"), "", "" }
+        fields[3] = FormField{ "reorder", "text", i18n_t(req, "settings.inventory.reorder"), "",
+            "0", false, "", "", settings_get("inventory.reorder", "0"), "", "decimal" }
+        return forms_open(fields, 4, "/settings?tab=inventory",
+            i18n_t(req, "settings.save"), i18n_locale(req))
+    }
+    if rho_str_eq(tab, "scheduler") {
+        var fields: FormField[3]
+        fields[0] = FormField{ "timezone", "text", i18n_t(req, "settings.scheduler.timezone"), "",
+            "Europe/Bucharest", false, "", "",
+            settings_get("scheduler.timezone", "Europe/Bucharest"), "", "" }
+        fields[1] = FormField{ "priority", "text", i18n_t(req, "settings.scheduler.priority"), "",
+            "normal", false, "", "", settings_get("scheduler.priority", "normal"), "", "" }
+        fields[2] = FormField{ "grace_hours", "text", i18n_t(req, "settings.scheduler.grace"), "",
+            "12", false, "", "", settings_get("scheduler.grace_hours", "12"), "", "numeric" }
+        return forms_open(fields, 3, "/settings?tab=scheduler",
+            i18n_t(req, "settings.save"), i18n_locale(req))
+    }
+    if rho_str_eq(tab, "widgets") {
+        var fields: FormField[3]
+        fields[0] = FormField{ "refresh_seconds", "text", i18n_t(req, "settings.widgets.refresh"), "",
+            "10", false, "", "", settings_get("widgets.refresh_seconds", "10"), "", "numeric" }
+        fields[1] = FormField{ "decimals", "select", i18n_t(req, "settings.widgets.decimals"), "",
+            "", false, "", "0|0,1|0.1,2|0.01,3|0.001",
+            settings_get("widgets.decimals", "2"), "", "" }
+        fields[2] = FormField{ "points", "text", i18n_t(req, "settings.widgets.points"), "",
+            "24", false, "", "", settings_get("widgets.points", "24"), "", "numeric" }
+        return forms_open(fields, 3, "/settings?tab=widgets",
+            i18n_t(req, "settings.save"), i18n_locale(req))
+    }
+    if rho_str_eq(tab, "configuration") {
+        let url: string = aqua_setting("mesh_url")
+        let project: string = aqua_setting("mesh_project")
+        let gateway: string = aqua_refresh_gateway()
+        return "<dl class=\"settings\"><dt>Application</dt><dd>aquarium</dd>" +
+            "<dt>Route</dt><dd>/</dd><dt>Port</dt><dd>8480</dd>" +
+            "<dt>Gateway provider</dt><dd>mesh-gateway</dd>" +
+            "<dt>Gateway URL</dt><dd>" + escape_html(url) + "</dd>" +
+            "<dt>Gateway project</dt><dd>" + escape_html(project) + "</dd>" +
+            "<dt>Resolved gateway</dt><dd>" + escape_html(gateway) + "</dd>" +
+            "<dt>Modules</dt><dd>inventory, scheduler, widgets</dd></dl>"
     }
     var fields: FormField[3]
     fields[0] = FormField{ "mesh_url", "text",
@@ -216,13 +309,22 @@ fn aqua_settings_page_message(req: Request, message: string) Response {
     fields[2] = FormField{ "mesh_token", "password",
         i18n_t(req, "settings.token"), i18n_t(req, "settings.token_hint"),
         "", false, "", "", aqua_setting("mesh_token"), "", "" }
-    let form: string = forms_open(fields, 3, "/settings",
+    return forms_open(fields, 3, "/settings?tab=gateway",
         i18n_t(req, "settings.save"), i18n_locale(req))
+}
+
+fn aqua_settings_page_message(req: Request, message: string) Response {
+    let tab: string = aqua_settings_tab(req)
+    var notice: string = ""
+    if message != "" {
+        notice = "<p class=\"notice\">" + escape_html(message) + "</p>"
+    }
+    aqua_ensure_gateway_conf()
     let body: string = template_fill(template_get("settings"),
         i18n_vars(req) +
         vars("notice", notice) +
-        vars("form", form) +
-        vars("status", status))
+        vars("nav", aqua_settings_nav(req, tab)) +
+        vars("tab_content", aqua_settings_form(req, tab)))
     return aqua_page(req, "Settings", body)
 }
 
@@ -232,21 +334,35 @@ fn aqua_settings_page(req: Request) Response {
 
 fn aqua_settings_save(req: Request) Response {
     let body: string = request_body(req)
+    let tab: string = aqua_settings_tab(req)
     if !forms_csrf_ok(body) {
         return aqua_settings_page_message(req, i18n_t(req, "settings.csrf_refused"))
     }
-    ignore_bool(rho_write_text(aqua_setting_file("mesh_url"),
-        aqua_trim(aqua_form(body, "mesh_url"))))
-    ignore_bool(rho_write_text(aqua_setting_file("mesh_project"),
-        aqua_trim(aqua_form(body, "mesh_project"))))
-    ignore_bool(rho_write_text(aqua_setting_file("mesh_token"),
-        aqua_trim(aqua_form(body, "mesh_token"))))
-    aqua_write_gateway_conf()
-    let gateway: string = aqua_refresh_gateway()
-    if gateway == "" {
-        return aqua_settings_page_message(req, "Settings saved, but the gateway provider did not return a gateway.")
+    if rho_str_eq(tab, "inventory") {
+        settings_set("inventory.currency", aqua_trim(aqua_form(body, "currency")))
+        settings_set("inventory.default_unit", aqua_trim(aqua_form(body, "default_unit")))
+        settings_set("inventory.decimals", aqua_trim(aqua_form(body, "decimals")))
+        settings_set("inventory.reorder", aqua_trim(aqua_form(body, "reorder")))
+        return redirect("/settings?tab=inventory")
     }
-    return aqua_settings_page_message(req, "Settings saved. Gateway: " + gateway)
+    if rho_str_eq(tab, "scheduler") {
+        settings_set("scheduler.timezone", aqua_trim(aqua_form(body, "timezone")))
+        settings_set("scheduler.priority", aqua_trim(aqua_form(body, "priority")))
+        settings_set("scheduler.grace_hours", aqua_trim(aqua_form(body, "grace_hours")))
+        return redirect("/settings?tab=scheduler")
+    }
+    if rho_str_eq(tab, "widgets") {
+        settings_set("widgets.refresh_seconds", aqua_trim(aqua_form(body, "refresh_seconds")))
+        settings_set("widgets.decimals", aqua_trim(aqua_form(body, "decimals")))
+        settings_set("widgets.points", aqua_trim(aqua_form(body, "points")))
+        return redirect("/settings?tab=widgets")
+    }
+    aqua_setting_set("mesh_url", aqua_form(body, "mesh_url"))
+    aqua_setting_set("mesh_project", aqua_form(body, "mesh_project"))
+    aqua_setting_set("mesh_token", aqua_form(body, "mesh_token"))
+    aqua_write_gateway_conf()
+    ignore_string(aqua_refresh_gateway())
+    return redirect("/settings?tab=gateway")
 }
 
 fn aqua_db_path() string {

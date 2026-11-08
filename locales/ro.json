@@ -22,5 +22,20 @@
   "settings.token_hint": "Rezervat pentru un API protejat al providerului.",
   "settings.save": "Salvează setările",
   "settings.project_prompt": "Alege un proiect gateway",
-  "settings.csrf_refused": "Refuzat: tokenul formularului nu corespunde."
+  "settings.csrf_refused": "Refuzat: tokenul formularului nu corespunde.",
+  "settings.tab.gateway": "Gateway",
+  "settings.tab.inventory": "Inventar",
+  "settings.tab.scheduler": "Programări",
+  "settings.tab.widgets": "Widgeturi",
+  "settings.tab.configuration": "Configurație",
+  "settings.inventory.currency": "Monedă",
+  "settings.inventory.unit": "Unitate implicită",
+  "settings.inventory.decimals": "Decimale",
+  "settings.inventory.reorder": "Nivel implicit de reaprovizionare",
+  "settings.scheduler.timezone": "Fus orar",
+  "settings.scheduler.priority": "Prioritate implicită",
+  "settings.scheduler.grace": "Ore de grație",
+  "settings.widgets.refresh": "Interval de reîmprospătare (secunde)",
+  "settings.widgets.decimals": "Decimale implicite",
+  "settings.widgets.points": "Puncte / rânduri implicite"
 }

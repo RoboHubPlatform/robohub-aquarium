@@ -22,5 +22,20 @@
   "settings.token_hint": "Reserved for a protected provider API.",
   "settings.save": "Save settings",
   "settings.project_prompt": "Choose a gateway project",
-  "settings.csrf_refused": "Refused: the form token did not match."
+  "settings.csrf_refused": "Refused: the form token did not match.",
+  "settings.tab.gateway": "Gateway",
+  "settings.tab.inventory": "Inventory",
+  "settings.tab.scheduler": "Scheduler",
+  "settings.tab.widgets": "Widgets",
+  "settings.tab.configuration": "Configuration",
+  "settings.inventory.currency": "Currency",
+  "settings.inventory.unit": "Default unit",
+  "settings.inventory.decimals": "Decimals",
+  "settings.inventory.reorder": "Default reorder level",
+  "settings.scheduler.timezone": "Timezone",
+  "settings.scheduler.priority": "Default priority",
+  "settings.scheduler.grace": "Grace hours",
+  "settings.widgets.refresh": "Refresh interval (seconds)",
+  "settings.widgets.decimals": "Default decimals",
+  "settings.widgets.points": "Default points / rows"
 }
