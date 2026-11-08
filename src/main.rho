@@ -2,6 +2,7 @@ module aquarium
 
 // The aquarium host. It owns the router and the port; the inventory module
 // included here adds its own routes under /expenses.
+include "../../../modules/i18n/src/main.rho"
 include "storage.rho"
 include "db/models.rho"
 include "db/queries.rho"
@@ -10,7 +11,6 @@ include "../../../modules/scheduler/src/main.rho"
 include "../../../contracts/gateway/manager.rho"
 include "../../../modules/widgets/src/main.rho"
 include "../../../modules/htmx/src/main.rho"
-include "../../../modules/i18n/src/main.rho"
 include "aquarium.rho"
 
 import std.sql
@@ -61,7 +61,7 @@ fn aquarium_docs(req: Request) Response {
 
 fn aquarium_home(req: Request) Response {
     let body: string = template_fill(template_get("home"),
-        i18n_vars(req) + vars("widgets", widgets_dashboard_cards(true)))
+        i18n_vars(req) + vars("widgets", widgets_dashboard_cards(true, i18n_locale(req))))
     let document: string = template_fill(template_get("layout"),
         vars("title", "Aquarium") + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) +
         vars("keeper", aquarium_keeper_link()) +

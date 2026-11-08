@@ -21,7 +21,7 @@ targets:
           cookie: aquarium_session
           public_key: ${RHO_HOME}/auth/public.pem
           mode: direct
-          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/expenses,/api/expenses,/widgets,/api/widgets,/notifications/stream,/docs"
+          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/expenses,/api/expenses,/scheduler,/api/scheduler,/widgets,/api/widgets,/notifications/stream,/docs"
           login_url: "/auth/login?audience=aquarium"
           scheme: auto
     files:
@@ -47,6 +47,18 @@ targets:
         file: ../../modules/i18n/locales/en.json
       - locale: ro
         file: ../../modules/i18n/locales/ro.json
+      - locale: en
+        file: ../../modules/widgets/locales/en.json
+      - locale: ro
+        file: ../../modules/widgets/locales/ro.json
+      - locale: en
+        file: ../../modules/inventory/locales/en.json
+      - locale: ro
+        file: ../../modules/inventory/locales/ro.json
+      - locale: en
+        file: ../../modules/scheduler/locales/en.json
+      - locale: ro
+        file: ../../modules/scheduler/locales/ro.json
     templates:
       - name: layout
         file: templates/layouts/layout.html
