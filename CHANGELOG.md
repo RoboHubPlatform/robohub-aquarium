@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.2] - 2026-11-08
+
+English and Romanian pages, flag-based language switching, and translated
+navigation, settings, forms and live widget updates. The Aquarium settings page
+now owns the runtime settings for the application and its Inventory, Scheduler
+and Widgets dependencies, with vertical tabs, a shared URL/gateway tab, and a
+single module-tab layout preference.
+
+## [0.3.1] - 2026-11-06
+
+Fixed chart widget to parse decimal values (was showing flat line). Chart now
+requests 2 hours of history instead of 24 hours for responsiveness. Service
+token now requires mesh:default scope.
+
 ## [0.3.0] - 2026-11-05
 
 Aquarium's dashboard charts use the robohub-mesh telemetry store. A chart bound
@@ -81,9 +95,3 @@ module serves `/expenses`, the scheduler serves `/scheduler` and
 `/api/scheduler`, and the widgets module serves the dashboard cards and
 `/api/widgets`. All keep their tables in the application's main SQL database and
 their records in its workspace.
-
-## [0.3.1] - 2026-11-06
-
-Fixed chart widget to parse decimal values (was showing flat line). Chart now
-requests 2 hours of history instead of 24 hours for responsiveness. Service
-token now requires mesh:default scope.

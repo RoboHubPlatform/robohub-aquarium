@@ -8,7 +8,7 @@
 module:
   name: aquarium
   type: rho
-  version: 0.3.1
+  version: 0.3.2
   kind: keeper-hosted
   title: Aquarium
   description: >
