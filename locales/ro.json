@@ -12,7 +12,7 @@
   "nav.docs": "Documentație",
   "home.dashboard": "Panou live",
   "home.add_widget": "+ Adaugă widget",
-  "settings.title": "Setări",
+  "settings.title": "Setări aplicație",
   "settings.intro": "Proiectul gateway folosit de această aplicație. Providerul de gateway activ servește gatewayul proiectului, iar Aquarium salvează adresa automat.",
   "settings.url": "Adresă gateway",
   "settings.url_hint": "Adresa providerului de gateway.",
@@ -39,7 +39,7 @@
   "settings.widgets.decimals": "Decimale implicite",
   "settings.widgets.points": "Puncte / rânduri implicite",
   "settings.tab.general": "General",
-  "settings.orientation": "Aspectul filelor",
+  "settings.orientation": "Aspectul filelor modulelor",
   "settings.orientation.vertical": "Vertical",
   "settings.orientation.horizontal": "Orizontal"
 }

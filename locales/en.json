@@ -12,7 +12,7 @@
   "nav.docs": "Documentation",
   "home.dashboard": "Live dashboard",
   "home.add_widget": "+ Add widget",
-  "settings.title": "Settings",
+  "settings.title": "Application settings",
   "settings.intro": "The gateway project this aquarium application uses. The enabled gateway provider serves the gateway of that project, and Aquarium stores the address automatically.",
   "settings.url": "Gateway URL",
   "settings.url_hint": "The gateway provider's address.",
@@ -39,7 +39,7 @@
   "settings.widgets.decimals": "Default decimals",
   "settings.widgets.points": "Default points / rows",
   "settings.tab.general": "General",
-  "settings.orientation": "Tab layout",
+  "settings.orientation": "Module tab layout",
   "settings.orientation.vertical": "Vertical",
   "settings.orientation.horizontal": "Horizontal"
 }

@@ -332,7 +332,6 @@ fn aqua_settings_page_message(req: Request, message: string) Response {
     let body: string = template_fill(template_get("settings"),
         i18n_vars(req) +
         vars("notice", notice) +
-        vars("tabs_orientation", settings_get("ui.tabs", "vertical")) +
         vars("nav", aqua_settings_nav(req, tab)) +
         vars("tab_content", aqua_settings_form(req, tab)))
     return aqua_page(req, "Settings", body)
