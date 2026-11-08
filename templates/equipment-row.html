@@ -1,0 +1,10 @@
+<tr>
+  <td>{{ name }}</td>
+  <td>{{ kind }}</td>
+  <td>{{ state }}</td>
+  <td>{{ last_value }}</td>
+  <td>
+    <form method="post" action="/equipment/state"><input type="hidden" name="id" value="{{ id }}"><select name="state"><option>on</option><option>off</option></select><button type="submit" class="quiet">Set</button></form>
+    <form method="post" action="/equipment/value"><input type="hidden" name="id" value="{{ id }}"><input name="value" placeholder="value"><button type="submit" class="quiet">Report</button></form>
+  </td>
+</tr>

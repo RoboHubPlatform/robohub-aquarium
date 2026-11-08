@@ -1,0 +1,9 @@
+<tr>
+  <td>{{ name }}</td>
+  <td>{{ kind }}</td>
+  <td>{{ metric }} {{ operator }} {{ threshold }}</td>
+  <td>{{ state }}</td>
+  <td>
+    <form method="post" action="/automation/simulate"><input type="hidden" name="id" value="{{ id }}"><input name="value" placeholder="value"><button type="submit" class="quiet">Evaluate</button></form>
+  </td>
+</tr>

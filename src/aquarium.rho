@@ -190,8 +190,10 @@ fn aqua_gateway_project_options(selected: string) string {
         if id == selected {
             mark = " selected"
         }
-        out = out + "<option value=\"" + escape_html(id) + "\"" + mark + ">" +
-            escape_html(name) + " (" + escape_html(id) + ")</option>"
+        out = out + template_fill(template_get("gateway-option"),
+            vars("id", id) +
+            vars("selected", mark) +
+            vars("name", name))
     }
     return out
 }
@@ -207,19 +209,12 @@ fn aqua_settings_page_message(message: string) Response {
     if gateway != "" {
         status = "<p><small>Gateway: <code>" + escape_html(gateway) + "</code></small></p>"
     }
-    let form: string = "<form class=\"panel-form\" method=\"post\" action=\"/settings\">" +
-        "<div class=\"grid\">" +
-        "<label>Gateway URL<input name=\"mesh_url\" value=\"" + escape_html(aqua_setting("mesh_url")) +
-        "\" placeholder=\"http://127.0.0.1:8478\"><small>The gateway provider's address.</small></label>" +
-        "<label>Gateway project<select name=\"mesh_project\">" +
-        aqua_gateway_project_options(aqua_setting("mesh_project")) +
-        "</select><small>The project whose gateway and devices this application uses.</small></label>" +
-        "<label>Gateway token (optional)<input name=\"mesh_token\" value=\"" +
-        escape_html(aqua_setting("mesh_token")) + "\"><small>Reserved for a protected provider API.</small></label>" +
-        "</div><div class=\"form-actions\"><button type=\"submit\">Save settings</button></div></form>"
-    let body: string = "<h1>Settings</h1><p>The gateway project this aquarium application uses. " +
-        "The enabled gateway provider serves the gateway of that project, and Aquarium stores the address automatically.</p>" +
-        notice + form + status
+    let body: string = template_fill(template_get("settings"),
+        vars("notice", notice) +
+        vars("mesh_url", aqua_setting("mesh_url")) +
+        vars("project_options", aqua_gateway_project_options(aqua_setting("mesh_project"))) +
+        vars("mesh_token", aqua_setting("mesh_token")) +
+        vars("status", status))
     return aqua_page("Settings", body)
 }
 
@@ -385,29 +380,20 @@ fn equipment_page(req: Request) Response {
     var i: u32 = 0
     while i < count {
         let device: Devices = devices[i]
-        rows = rows + "<tr><td>" + escape_html(device.name) + "</td><td>" +
-            escape_html(device.kind) + "</td><td>" + escape_html(device.state) +
-            "</td><td>" + escape_html(device.lastValue) + "</td><td>" +
-            "<form method=\"post\" action=\"/equipment/state\"><input type=\"hidden\" name=\"id\" value=\"" +
-            rho_int_to_str(u32(device.id)) + "\"><select name=\"state\"><option>on</option><option>off</option></select>" +
-            "<button type=\"submit\" class=\"quiet\">Set</button></form>" +
-            "<form method=\"post\" action=\"/equipment/value\"><input type=\"hidden\" name=\"id\" value=\"" +
-            rho_int_to_str(u32(device.id)) + "\"><input name=\"value\" placeholder=\"value\">" +
-            "<button type=\"submit\" class=\"quiet\">Report</button></form></td></tr>"
+        let html: string = template_fill(template_get("equipment-row"),
+            vars("id", rho_int_to_str(u32(device.id))) +
+            vars("name", device.name) +
+            vars("kind", device.kind) +
+            vars("state", device.state) +
+            vars("last_value", device.lastValue))
+        rows = rows + html + "\n"
         i = i + 1
     }
     if rows == "" {
         rows = "<tr><td colspan=\"5\">No equipment defined.</td></tr>"
     }
-    let body: string = "<h1>Equipment</h1><p>Pumps, lights, heaters and the devices around them. " +
-        "Without a board a device is a row with a state and the last value reported; the same row becomes real when a node binds it.</p>" +
-        "<form class=\"panel-form\" method=\"post\" action=\"/equipment/add\"><div class=\"grid\">" +
-        "<label>Name<input name=\"name\" required placeholder=\"Return pump\"></label>" +
-        "<label>Kind<input name=\"kind\" placeholder=\"pump, light, heater, fan, sensor\"></label>" +
-        "<label>Initial state<select name=\"state\"><option>off</option><option>on</option></select></label>" +
-        "</div><div class=\"form-actions\"><button type=\"submit\">Add equipment</button></div></form>" +
-        "<h2>Devices</h2><table><thead><tr><th>Name</th><th>Kind</th><th>State</th><th>Last value</th><th></th></tr></thead><tbody>" +
-        rows + "</tbody></table>"
+    let body: string = template_fill(template_get("equipment"),
+        vars("rows", rows))
     return aqua_page("Equipment", body)
 }
 
@@ -480,30 +466,22 @@ fn automation_page(req: Request) Response {
     var i: u32 = 0
     while i < count {
         let rule: AutomationRules = rules[i]
-        rows = rows + "<tr><td>" + escape_html(rule.name) + "</td><td>" +
-            escape_html(rule.kind) + "</td><td>" + escape_html(rule.metric) +
-            " " + escape_html(rule.operator) + " " + escape_html(rule.threshold) +
-            "</td><td>" + escape_html(rule.state) + "</td><td>" +
-            "<form method=\"post\" action=\"/automation/simulate\"><input type=\"hidden\" name=\"id\" value=\"" +
-            rho_int_to_str(u32(rule.id)) + "\"><input name=\"value\" placeholder=\"value\">" +
-            "<button type=\"submit\" class=\"quiet\">Evaluate</button></form></td></tr>"
+        let html: string = template_fill(template_get("automation-row"),
+            vars("id", rho_int_to_str(u32(rule.id))) +
+            vars("name", rule.name) +
+            vars("kind", rule.kind) +
+            vars("metric", rule.metric) +
+            vars("operator", rule.operator) +
+            vars("threshold", rule.threshold) +
+            vars("state", rule.state))
+        rows = rows + html + "\n"
         i = i + 1
     }
     if rows == "" {
         rows = "<tr><td colspan=\"5\">No automation rules.</td></tr>"
     }
-    let body: string = "<h1>Automation</h1><p>Rules for ATO, lighting, pH/CO2, dosing, flow, thermal protection, leaks and pumps. " +
-        "Evaluate a value to drive the rule; the hardware binding is the next layer, not a change to the rule.</p>" +
-        "<form class=\"panel-form\" method=\"post\" action=\"/automation/add\"><div class=\"grid\">" +
-        "<label>Name<input name=\"name\" required placeholder=\"Sump over temperature\"></label>" +
-        "<label>Kind<input name=\"kind\" placeholder=\"thermal, ato, ph_co2, leak, dosing, lighting\"></label>" +
-        "<label>Metric<input name=\"metric\" placeholder=\"water_temp\"></label>" +
-        "<label>Operator<select name=\"operator\"><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option></select></label>" +
-        "<label>Threshold<input name=\"threshold\" placeholder=\"28.0\"></label>" +
-        "<label>Action<input name=\"action\" placeholder=\"cool_on\"></label>" +
-        "</div><div class=\"form-actions\"><button type=\"submit\">Add rule</button></div></form>" +
-        "<h2>Rules</h2><table><thead><tr><th>Name</th><th>Kind</th><th>Condition</th><th>State</th><th></th></tr></thead><tbody>" +
-        rows + "</tbody></table>"
+    let body: string = template_fill(template_get("automation"),
+        vars("rows", rows))
     return aqua_page("Automation", body)
 }
 
@@ -589,25 +567,21 @@ fn chemistry_page(req: Request) Response {
     var i: u32 = 0
     while i < count {
         let test: WaterTests = tests[i]
-        rows = rows + "<tr><td>" + escape_html(test.parameter) + "</td><td>" +
-            escape_html(test.value) + " " + escape_html(test.unit) + "</td><td>" +
-            escape_html(test.testedAt) + "</td><td>" + escape_html(test.note) + "</td></tr>"
+        let html: string = template_fill(template_get("chemistry-row"),
+            vars("parameter", test.parameter) +
+            vars("value", test.value) +
+            vars("unit", test.unit) +
+            vars("tested_at", test.testedAt) +
+            vars("note", test.note))
+        rows = rows + html + "\n"
         i = i + 1
     }
     if rows == "" {
         rows = "<tr><td colspan=\"4\">No water tests recorded.</td></tr>"
     }
     let today: string = aqua_date(aqua_now())
-    let body: string = "<h1>Water chemistry</h1><p>Ammonia, nitrite, nitrate, phosphate, KH, calcium and magnesium over time.</p>" +
-        "<form class=\"panel-form\" method=\"post\" action=\"/chemistry/add\"><div class=\"grid\">" +
-        "<label>Parameter<input name=\"parameter\" placeholder=\"Nitrate\"></label>" +
-        "<label>Value<input name=\"value\" placeholder=\"5\"></label>" +
-        "<label>Unit<input name=\"unit\" placeholder=\"ppm\"></label>" +
-        "<label>Tested at<input name=\"tested_at\" value=\"" + escape_html(today) + "\"></label>" +
-        "<label>Note<input name=\"note\"></label></div><div class=\"form-actions\">" +
-        "<button type=\"submit\">Record test</button></div></form>" +
-        "<h2>Log</h2><table><thead><tr><th>Parameter</th><th>Value</th><th>Tested</th><th>Note</th></tr></thead><tbody>" +
-        rows + "</tbody></table>"
+    let body: string = template_fill(template_get("chemistry"),
+        vars("rows", rows) + vars("today", today))
     return aqua_page("Chemistry", body)
 }
 
@@ -631,15 +605,8 @@ fn chemistry_add(req: Request) Response {
 
 fn modes_page(req: Request) Response {
     let now: u32 = aqua_now()
-    let body: string = "<h1>Operational modes</h1><p>Water change and feeding pause the equipment they name and resume when the timer expires.</p>" +
-        "<form class=\"panel-form\" method=\"post\" action=\"/modes/start\"><div class=\"grid\">" +
-        "<label>Mode<select name=\"name\"><option>water_change</option><option>feeding</option></select></label>" +
-        "<label>Duration (minutes)<input name=\"minutes\" value=\"30\" inputmode=\"numeric\"></label>" +
-        "<label>Note<input name=\"note\"></label></div><div class=\"form-actions\">" +
-        "<button type=\"submit\">Start mode</button></div></form>" +
-        "<form class=\"panel-form\" method=\"post\" action=\"/modes/stop\"><div class=\"form-actions\">" +
-        "<button type=\"submit\" class=\"quiet\">Resume normal operation</button></div></form>" +
-        "<p><small>Current time: " + escape_html(aqua_date(now)) + "</small></p>"
+    let body: string = template_fill(template_get("modes"),
+        vars("now", aqua_date(now)))
     return aqua_page("Modes", body)
 }
 
@@ -698,15 +665,18 @@ fn events_page(req: Request) Response {
     var i: u32 = 0
     while i < count {
         let event: SystemEvents = events[i]
-        rows = rows + "<tr><td>" + escape_html(aqua_date(u32(event.createdEpoch))) +
-            "</td><td>" + escape_html(event.severity) + "</td><td>" +
-            escape_html(event.kind) + "</td><td>" + escape_html(event.message) + "</td></tr>"
+        let html: string = template_fill(template_get("events-row"),
+            vars("date", aqua_date(u32(event.createdEpoch))) +
+            vars("severity", event.severity) +
+            vars("kind", event.kind) +
+            vars("message", event.message))
+        rows = rows + html + "\n"
         i = i + 1
     }
     if rows == "" {
         rows = "<tr><td colspan=\"4\">No events recorded.</td></tr>"
     }
-    return aqua_page("Events", "<h1>System events</h1><p>The append-only audit trail: overrides, trips, modes and automation.</p>" +
-        "<table><thead><tr><th>When</th><th>Severity</th><th>Kind</th><th>Message</th></tr></thead><tbody>" +
-        rows + "</tbody></table>")
+    let body: string = template_fill(template_get("events"),
+        vars("rows", rows))
+    return aqua_page("Events", body)
 }

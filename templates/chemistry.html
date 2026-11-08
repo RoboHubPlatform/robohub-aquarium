@@ -1,0 +1,17 @@
+<h1>Water chemistry</h1>
+<p>Ammonia, nitrite, nitrate, phosphate, KH, calcium and magnesium over time.</p>
+<form class="panel-form" method="post" action="/chemistry/add">
+  <div class="grid">
+    <label>Parameter<input name="parameter" placeholder="Nitrate"></label>
+    <label>Value<input name="value" placeholder="5"></label>
+    <label>Unit<input name="unit" placeholder="ppm"></label>
+    <label>Tested at<input name="tested_at" value="{{ today }}" placeholder="2026-11-02T10:00"></label>
+    <label>Note<input name="note" placeholder="Optional"></label>
+  </div>
+  <div class="form-actions"><button type="submit">Record test</button></div>
+</form>
+<h2>Tests</h2>
+<table>
+  <thead><tr><th>Parameter</th><th>Value</th><th>Tested</th><th>Note</th></tr></thead>
+  <tbody>{{{ rows }}}</tbody>
+</table>

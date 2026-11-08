@@ -1,0 +1,12 @@
+<h1>Settings</h1>
+<p>The gateway project this aquarium application uses. The enabled gateway provider serves the gateway of that project, and Aquarium stores the address automatically.</p>
+{{{ notice }}}
+<form class="panel-form" method="post" action="/settings">
+  <div class="grid">
+    <label>Gateway URL<input name="mesh_url" value="{{ mesh_url }}" placeholder="http://127.0.0.1:8478"><small>The gateway provider's address.</small></label>
+    <label>Gateway project<select name="mesh_project">{{{ project_options }}}</select><small>The project whose gateway and devices this application uses.</small></label>
+    <label>Gateway token (optional)<input name="mesh_token" value="{{ mesh_token }}"><small>Reserved for a protected provider API.</small></label>
+  </div>
+  <div class="form-actions"><button type="submit">Save settings</button></div>
+</form>
+{{{ status }}}

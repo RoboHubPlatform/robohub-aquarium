@@ -1,0 +1,18 @@
+<h1>Automation</h1>
+<p>Rules for ATO, lighting, pH/CO2, dosing, flow, thermal protection, leaks and pumps. Evaluate a value to drive the rule; the hardware binding is the next layer, not a change to the rule.</p>
+<form class="panel-form" method="post" action="/automation/add">
+  <div class="grid">
+    <label>Name<input name="name" required placeholder="Sump over temperature"></label>
+    <label>Kind<input name="kind" placeholder="thermal, ato, ph_co2, leak, dosing, lighting"></label>
+    <label>Metric<input name="metric" placeholder="water_temp"></label>
+    <label>Operator<select name="operator"><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option></select></label>
+    <label>Threshold<input name="threshold" placeholder="28.0"></label>
+    <label>Action<input name="action" placeholder="cool_on"></label>
+  </div>
+  <div class="form-actions"><button type="submit">Add rule</button></div>
+</form>
+<h2>Rules</h2>
+<table>
+  <thead><tr><th>Name</th><th>Kind</th><th>Condition</th><th>State</th><th></th></tr></thead>
+  <tbody>{{{ rows }}}</tbody>
+</table>

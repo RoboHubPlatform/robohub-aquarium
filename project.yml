@@ -42,3 +42,25 @@ targets:
         file: templates/layout.html
       - name: home
         file: templates/home.html
+      - name: settings
+        file: templates/settings.html
+      - name: gateway-option
+        file: templates/gateway-option.html
+      - name: modes
+        file: templates/modes.html
+      - name: equipment
+        file: templates/equipment.html
+      - name: equipment-row
+        file: templates/equipment-row.html
+      - name: automation
+        file: templates/automation.html
+      - name: automation-row
+        file: templates/automation-row.html
+      - name: chemistry
+        file: templates/chemistry.html
+      - name: chemistry-row
+        file: templates/chemistry-row.html
+      - name: events
+        file: templates/events.html
+      - name: events-row
+        file: templates/events-row.html
