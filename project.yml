@@ -21,7 +21,7 @@ targets:
           cookie: aquarium_session
           public_key: ${RHO_HOME}/auth/public.pem
           mode: direct
-          skip_paths: "/healthz,/auth/login,/auth/callback,/static,/expenses,/api/expenses,/widgets,/api/widgets,/notifications/stream"
+          skip_paths: "/healthz,/auth/login,/assets,/assets/,/auth/callback,/static,/expenses,/api/expenses,/widgets,/api/widgets,/notifications/stream"
           login_url: "/auth/login?audience=aquarium"
           scheme: auto
     files:

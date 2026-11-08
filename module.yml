@@ -83,6 +83,7 @@ deps:
   rho-log: ">=0.1.0"
   rho-sql: ">=0.1.0"
   robohub:
+    htmx: ">=0.1.0"
     forms: ">=0.1.0"
     notifications: ">=0.1.0"
     inventory: ">=0.1.0"

@@ -352,7 +352,7 @@ fn aqua_keeper_link() string {
 
 fn aqua_page(title: string, body: string) Response {
     let document: string = template_fill(template_get("layout"),
-        vars("title", title) + vars("body", body) + vars("keeper", aqua_keeper_link()) +
+        vars("title", title) + vars("htmx", htmx_head()) + vars("body", body) + vars("keeper", aqua_keeper_link()) +
         vars("notifications", notification_embed()) + vars("forms_style", forms_style()))
     return html(status_ok(), document)
 }
