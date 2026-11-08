@@ -20,5 +20,7 @@
   "settings.project_hint": "The project whose gateway and devices this application uses.",
   "settings.token": "Gateway token (optional)",
   "settings.token_hint": "Reserved for a protected provider API.",
-  "settings.save": "Save settings"
+  "settings.save": "Save settings",
+  "settings.project_prompt": "Choose a gateway project",
+  "settings.csrf_refused": "Refused: the form token did not match."
 }

@@ -161,8 +161,8 @@ fn aqua_refresh_gateway() string {
     return aqua_setting("gateway_url")
 }
 
-fn aqua_gateway_project_options(selected: string) string {
-    var out: string = "<option value=\"\">Choose a gateway project</option>"
+fn aqua_gateway_project_choices() string {
+    var out: string = ""
     let text: string = gateway_projects()
     if text == "" {
         return out
@@ -186,14 +186,10 @@ fn aqua_gateway_project_options(selected: string) string {
         if name == "" {
             name = id
         }
-        var mark: string = ""
-        if id == selected {
-            mark = " selected"
+        if out != "" {
+            out = out + ","
         }
-        out = out + template_fill(template_get("gateway-option"),
-            vars("id", id) +
-            vars("selected", mark) +
-            vars("name", name))
+        out = out + id + "|" + name
     }
     return out
 }
@@ -209,12 +205,23 @@ fn aqua_settings_page_message(req: Request, message: string) Response {
     if gateway != "" {
         status = "<p><small>Gateway: <code>" + escape_html(gateway) + "</code></small></p>"
     }
+    var fields: FormField[3]
+    fields[0] = FormField{ "mesh_url", "text",
+        i18n_t(req, "settings.url"), i18n_t(req, "settings.url_hint"),
+        "http://127.0.0.1:8478", false, "url", "", aqua_setting("mesh_url"), "" }
+    fields[1] = FormField{ "mesh_project", "select",
+        i18n_t(req, "settings.project"), i18n_t(req, "settings.project_hint"),
+        i18n_t(req, "settings.project_prompt"), false, "",
+        aqua_gateway_project_choices(), aqua_setting("mesh_project"), "" }
+    fields[2] = FormField{ "mesh_token", "password",
+        i18n_t(req, "settings.token"), i18n_t(req, "settings.token_hint"),
+        "", false, "", "", aqua_setting("mesh_token"), "" }
+    let form: string = forms_open(fields, 3, "/settings",
+        i18n_t(req, "settings.save"), i18n_locale(req))
     let body: string = template_fill(template_get("settings"),
         i18n_vars(req) +
         vars("notice", notice) +
-        vars("mesh_url", aqua_setting("mesh_url")) +
-        vars("project_options", aqua_gateway_project_options(aqua_setting("mesh_project"))) +
-        vars("mesh_token", aqua_setting("mesh_token")) +
+        vars("form", form) +
         vars("status", status))
     return aqua_page(req, "Settings", body)
 }
@@ -225,6 +232,9 @@ fn aqua_settings_page(req: Request) Response {
 
 fn aqua_settings_save(req: Request) Response {
     let body: string = request_body(req)
+    if !forms_csrf_ok(body) {
+        return aqua_settings_page_message(req, i18n_t(req, "settings.csrf_refused"))
+    }
     ignore_bool(rho_write_text(aqua_setting_file("mesh_url"),
         aqua_trim(aqua_form(body, "mesh_url"))))
     ignore_bool(rho_write_text(aqua_setting_file("mesh_project"),

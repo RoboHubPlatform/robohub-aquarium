@@ -1,12 +1,5 @@
 <h1>{{t "settings.title"}}</h1>
 <p>{{t "settings.intro"}}</p>
 {{{ notice }}}
-<form class="panel-form" method="post" action="/settings">
-  <div class="grid">
-    <label>{{t "settings.url"}}<input name="mesh_url" value="{{ mesh_url }}" placeholder="http://127.0.0.1:8478"><small>{{t "settings.url_hint"}}</small></label>
-    <label>{{t "settings.project"}}<select name="mesh_project">{{{ project_options }}}</select><small>{{t "settings.project_hint"}}</small></label>
-    <label>{{t "settings.token"}}<input name="mesh_token" value="{{ mesh_token }}"><small>{{t "settings.token_hint"}}</small></label>
-  </div>
-  <div class="form-actions"><button type="submit">{{t "settings.save"}}</button></div>
-</form>
+{{{ form }}}
 {{{ status }}}

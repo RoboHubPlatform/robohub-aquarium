@@ -20,5 +20,7 @@
   "settings.project_hint": "Proiectul al cărui gateway și dispozitive sunt folosite de această aplicație.",
   "settings.token": "Token gateway (opțional)",
   "settings.token_hint": "Rezervat pentru un API protejat al providerului.",
-  "settings.save": "Salvează setările"
+  "settings.save": "Salvează setările",
+  "settings.project_prompt": "Alege un proiect gateway",
+  "settings.csrf_refused": "Refuzat: tokenul formularului nu corespunde."
 }

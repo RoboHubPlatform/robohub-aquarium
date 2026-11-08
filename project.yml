@@ -59,6 +59,10 @@ targets:
         file: ../../modules/scheduler/locales/en.json
       - locale: ro
         file: ../../modules/scheduler/locales/ro.json
+      - locale: en
+        file: ../../modules/forms/locales/en.json
+      - locale: ro
+        file: ../../modules/forms/locales/ro.json
     templates:
       - name: layout
         file: templates/layouts/layout.html
@@ -66,8 +70,6 @@ targets:
         file: templates/pages/home.html
       - name: settings
         file: templates/pages/settings.html
-      - name: gateway-option
-        file: templates/parts/gateway-option.html
       - name: modes
         file: templates/pages/modes.html
       - name: equipment
