@@ -37,5 +37,9 @@
   "settings.scheduler.grace": "Grace hours",
   "settings.widgets.refresh": "Refresh interval (seconds)",
   "settings.widgets.decimals": "Default decimals",
-  "settings.widgets.points": "Default points / rows"
+  "settings.widgets.points": "Default points / rows",
+  "settings.tab.general": "General",
+  "settings.orientation": "Tab layout",
+  "settings.orientation.vertical": "Vertical",
+  "settings.orientation.horizontal": "Horizontal"
 }

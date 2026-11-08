@@ -214,8 +214,8 @@ fn aqua_gateway_project_choices() string {
 
 fn aqua_settings_tab(req: Request) string {
     let tab: string = request_query_param(req, "tab")
-    if tab == "" { return "gateway" }
-    if rho_str_eq(tab, "inventory") || rho_str_eq(tab, "scheduler") ||
+    if tab == "" { return "general" }
+    if rho_str_eq(tab, "general") || rho_str_eq(tab, "inventory") || rho_str_eq(tab, "scheduler") ||
         rho_str_eq(tab, "widgets") || rho_str_eq(tab, "configuration") {
         return tab
     }
@@ -224,8 +224,8 @@ fn aqua_settings_tab(req: Request) string {
 
 fn aqua_settings_nav(req: Request, active: string) string {
     var out: string = "<nav class=\"settings-tabs\">"
-    let ids: string = "gateway,inventory,scheduler,widgets,configuration"
-    let keys: string = "settings.tab.gateway,settings.tab.inventory,settings.tab.scheduler,settings.tab.widgets,settings.tab.configuration"
+    let ids: string = "general,gateway,inventory,scheduler,widgets,configuration"
+    let keys: string = "settings.tab.general,settings.tab.gateway,settings.tab.inventory,settings.tab.scheduler,settings.tab.widgets,settings.tab.configuration"
     while ids != "" {
         let id_at: i32 = rho_str_index_of(ids, ",")
         let key_at: i32 = rho_str_index_of(keys, ",")
@@ -247,6 +247,15 @@ fn aqua_settings_nav(req: Request, active: string) string {
 }
 
 fn aqua_settings_form(req: Request, tab: string) string {
+    if rho_str_eq(tab, "general") {
+        var fields: FormField[1]
+        fields[0] = FormField{ "tabs", "select", i18n_t(req, "settings.orientation"), "",
+            "", false, "", "vertical|" + i18n_t(req, "settings.orientation.vertical") +
+            ",horizontal|" + i18n_t(req, "settings.orientation.horizontal"),
+            settings_get("ui.tabs", "vertical"), "", "" }
+        return forms_open(fields, 1, "/settings?tab=general",
+            i18n_t(req, "settings.save"), i18n_locale(req))
+    }
     if rho_str_eq(tab, "inventory") {
         var fields: FormField[4]
         fields[0] = FormField{ "currency", "select", i18n_t(req, "settings.inventory.currency"), "",
@@ -323,6 +332,7 @@ fn aqua_settings_page_message(req: Request, message: string) Response {
     let body: string = template_fill(template_get("settings"),
         i18n_vars(req) +
         vars("notice", notice) +
+        vars("tabs_orientation", settings_get("ui.tabs", "vertical")) +
         vars("nav", aqua_settings_nav(req, tab)) +
         vars("tab_content", aqua_settings_form(req, tab)))
     return aqua_page(req, "Settings", body)
@@ -337,6 +347,10 @@ fn aqua_settings_save(req: Request) Response {
     let tab: string = aqua_settings_tab(req)
     if !forms_csrf_ok(body) {
         return aqua_settings_page_message(req, i18n_t(req, "settings.csrf_refused"))
+    }
+    if rho_str_eq(tab, "general") {
+        settings_set("ui.tabs", aqua_trim(aqua_form(body, "tabs")))
+        return redirect("/settings?tab=general")
     }
     if rho_str_eq(tab, "inventory") {
         settings_set("inventory.currency", aqua_trim(aqua_form(body, "currency")))

@@ -37,5 +37,9 @@
   "settings.scheduler.grace": "Ore de grație",
   "settings.widgets.refresh": "Interval de reîmprospătare (secunde)",
   "settings.widgets.decimals": "Decimale implicite",
-  "settings.widgets.points": "Puncte / rânduri implicite"
+  "settings.widgets.points": "Puncte / rânduri implicite",
+  "settings.tab.general": "General",
+  "settings.orientation": "Aspectul filelor",
+  "settings.orientation.vertical": "Vertical",
+  "settings.orientation.horizontal": "Orizontal"
 }
