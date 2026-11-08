@@ -208,14 +208,14 @@ fn aqua_settings_page_message(req: Request, message: string) Response {
     var fields: FormField[3]
     fields[0] = FormField{ "mesh_url", "text",
         i18n_t(req, "settings.url"), i18n_t(req, "settings.url_hint"),
-        "http://127.0.0.1:8478", false, "url", "", aqua_setting("mesh_url"), "" }
+        "http://127.0.0.1:8478", false, "url", "", aqua_setting("mesh_url"), "", "" }
     fields[1] = FormField{ "mesh_project", "select",
         i18n_t(req, "settings.project"), i18n_t(req, "settings.project_hint"),
         i18n_t(req, "settings.project_prompt"), false, "",
-        aqua_gateway_project_choices(), aqua_setting("mesh_project"), "" }
+        aqua_gateway_project_choices(), aqua_setting("mesh_project"), "", "" }
     fields[2] = FormField{ "mesh_token", "password",
         i18n_t(req, "settings.token"), i18n_t(req, "settings.token_hint"),
-        "", false, "", "", aqua_setting("mesh_token"), "" }
+        "", false, "", "", aqua_setting("mesh_token"), "", "" }
     let form: string = forms_open(fields, 3, "/settings",
         i18n_t(req, "settings.save"), i18n_locale(req))
     let body: string = template_fill(template_get("settings"),
