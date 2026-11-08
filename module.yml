@@ -39,17 +39,14 @@ modules:
   - name: inventory
     route: /expenses
     enabled: true
-    version: ">=0.1.0"
     config:
       currency: RON
   - name: scheduler
     route: /scheduler
     enabled: true
-    version: ">=0.1.0"
   - name: widgets
     route: /widgets
     enabled: true
-    version: ">=0.1.0"
 
 # The gateway provider this application uses. Aquarium does not know Mesh's
 # API; it asks the gateway contract, and this plugin answers. Another provider
