@@ -1,12 +1,12 @@
-<h1>Settings</h1>
-<p>The gateway project this aquarium application uses. The enabled gateway provider serves the gateway of that project, and Aquarium stores the address automatically.</p>
+<h1>{{t "settings.title"}}</h1>
+<p>{{t "settings.intro"}}</p>
 {{{ notice }}}
 <form class="panel-form" method="post" action="/settings">
   <div class="grid">
-    <label>Gateway URL<input name="mesh_url" value="{{ mesh_url }}" placeholder="http://127.0.0.1:8478"><small>The gateway provider's address.</small></label>
-    <label>Gateway project<select name="mesh_project">{{{ project_options }}}</select><small>The project whose gateway and devices this application uses.</small></label>
-    <label>Gateway token (optional)<input name="mesh_token" value="{{ mesh_token }}"><small>Reserved for a protected provider API.</small></label>
+    <label>{{t "settings.url"}}<input name="mesh_url" value="{{ mesh_url }}" placeholder="http://127.0.0.1:8478"><small>{{t "settings.url_hint"}}</small></label>
+    <label>{{t "settings.project"}}<select name="mesh_project">{{{ project_options }}}</select><small>{{t "settings.project_hint"}}</small></label>
+    <label>{{t "settings.token"}}<input name="mesh_token" value="{{ mesh_token }}"><small>{{t "settings.token_hint"}}</small></label>
   </div>
-  <div class="form-actions"><button type="submit">Save settings</button></div>
+  <div class="form-actions"><button type="submit">{{t "settings.save"}}</button></div>
 </form>
 {{{ status }}}

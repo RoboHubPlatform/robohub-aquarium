@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ locale }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -102,16 +102,17 @@
 <header class="topbar">
   <div class="brand">RoboHub <em>Aquarium</em></div>
   <nav>
-    <a href="/">Home</a>
-    <a href="/expenses">Inventory</a>
-    <a href="/scheduler">Scheduler</a>
-    <a href="/widgets">Widgets</a>
-    <a href="/equipment">Equipment</a>
-    <a href="/automation">Automation</a>
-    <a href="/chemistry">Chemistry</a>
-    <a href="/modes">Modes</a>
-    <a href="/events">Events</a>
-    <a href="/settings">Settings</a>
+    <a href="/">{{t "nav.home"}}</a>
+    <a href="/expenses">{{t "nav.inventory"}}</a>
+    <a href="/scheduler">{{t "nav.scheduler"}}</a>
+    <a href="/widgets">{{t "nav.widgets"}}</a>
+    <a href="/equipment">{{t "nav.equipment"}}</a>
+    <a href="/automation">{{t "nav.automation"}}</a>
+    <a href="/chemistry">{{t "nav.chemistry"}}</a>
+    <a href="/modes">{{t "nav.modes"}}</a>
+    <a href="/events">{{t "nav.events"}}</a>
+    <a href="/settings">{{t "nav.settings"}}</a>
+    {{{ locale_switch }}}
     {{{ keeper }}}
   </nav>
 </header>
@@ -122,10 +123,10 @@
   <span id="status-scheduler">Tasks: —</span>
   <span id="status-widgets"></span>
   <nav>
-    <a href="/expenses">Inventory</a>
-    <a href="/scheduler">Scheduler</a>
-    <a href="/widgets">Widgets</a>
-    <a href="/docs">Documentation</a>
+    <a href="/expenses">{{t "nav.inventory"}}</a>
+    <a href="/scheduler">{{t "nav.scheduler"}}</a>
+    <a href="/widgets">{{t "nav.widgets"}}</a>
+    <a href="/docs">{{t "nav.docs"}}</a>
     {{{ keeper }}}
   </nav>
 </footer>

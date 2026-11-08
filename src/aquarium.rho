@@ -198,7 +198,7 @@ fn aqua_gateway_project_options(selected: string) string {
     return out
 }
 
-fn aqua_settings_page_message(message: string) Response {
+fn aqua_settings_page_message(req: Request, message: string) Response {
     let notice: string = ""
     if message != "" {
         notice = "<p class=\"notice\">" + escape_html(message) + "</p>"
@@ -210,16 +210,17 @@ fn aqua_settings_page_message(message: string) Response {
         status = "<p><small>Gateway: <code>" + escape_html(gateway) + "</code></small></p>"
     }
     let body: string = template_fill(template_get("settings"),
+        i18n_vars(req) +
         vars("notice", notice) +
         vars("mesh_url", aqua_setting("mesh_url")) +
         vars("project_options", aqua_gateway_project_options(aqua_setting("mesh_project"))) +
         vars("mesh_token", aqua_setting("mesh_token")) +
         vars("status", status))
-    return aqua_page("Settings", body)
+    return aqua_page(req, "Settings", body)
 }
 
 fn aqua_settings_page(req: Request) Response {
-    return aqua_settings_page_message("")
+    return aqua_settings_page_message(req, "")
 }
 
 fn aqua_settings_save(req: Request) Response {
@@ -233,9 +234,9 @@ fn aqua_settings_save(req: Request) Response {
     aqua_write_gateway_conf()
     let gateway: string = aqua_refresh_gateway()
     if gateway == "" {
-        return aqua_settings_page_message("Settings saved, but the gateway provider did not return a gateway.")
+        return aqua_settings_page_message(req, "Settings saved, but the gateway provider did not return a gateway.")
     }
-    return aqua_settings_page_message("Settings saved. Gateway: " + gateway)
+    return aqua_settings_page_message(req, "Settings saved. Gateway: " + gateway)
 }
 
 fn aqua_db_path() string {
@@ -350,9 +351,9 @@ fn aqua_keeper_link() string {
         "\"><span aria-hidden=\"true\">↑</span> Keeper</a>"
 }
 
-fn aqua_page(title: string, body: string) Response {
+fn aqua_page(req: Request, title: string, body: string) Response {
     let document: string = template_fill(template_get("layout"),
-        vars("title", title) + vars("htmx", htmx_head()) + vars("body", body) + vars("keeper", aqua_keeper_link()) +
+        vars("title", title) + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) + vars("keeper", aqua_keeper_link()) +
         vars("notifications", notification_embed()) + vars("forms_style", forms_style()))
     return html(status_ok(), document)
 }
@@ -364,7 +365,7 @@ fn aqua_page(title: string, body: string) Response {
 fn equipment_page(req: Request) Response {
     let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
     if !opened.is_ok {
-        return aqua_page("Equipment", "<p>The database could not be opened.</p>")
+        return aqua_page(req, "Equipment", "<p>The database could not be opened.</p>")
     }
     let db: SqlDb = opened.ok
     ignore_u32(sql_apply(db, ""))
@@ -394,7 +395,7 @@ fn equipment_page(req: Request) Response {
     }
     let body: string = template_fill(template_get("equipment"),
         vars("rows", rows))
-    return aqua_page("Equipment", body)
+    return aqua_page(req, "Equipment", body)
 }
 
 fn equipment_add(req: Request) Response {
@@ -449,7 +450,7 @@ fn equipment_value(req: Request) Response {
 fn automation_page(req: Request) Response {
     let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
     if !opened.is_ok {
-        return aqua_page("Automation", "<p>The database could not be opened.</p>")
+        return aqua_page(req, "Automation", "<p>The database could not be opened.</p>")
     }
     let db: SqlDb = opened.ok
     ignore_u32(sql_apply(db, ""))
@@ -482,7 +483,7 @@ fn automation_page(req: Request) Response {
     }
     let body: string = template_fill(template_get("automation"),
         vars("rows", rows))
-    return aqua_page("Automation", body)
+    return aqua_page(req, "Automation", body)
 }
 
 fn automation_add(req: Request) Response {
@@ -551,7 +552,7 @@ fn automation_simulate(req: Request) Response {
 fn chemistry_page(req: Request) Response {
     let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
     if !opened.is_ok {
-        return aqua_page("Chemistry", "<p>The database could not be opened.</p>")
+        return aqua_page(req, "Chemistry", "<p>The database could not be opened.</p>")
     }
     let db: SqlDb = opened.ok
     ignore_u32(sql_apply(db, ""))
@@ -582,7 +583,7 @@ fn chemistry_page(req: Request) Response {
     let today: string = aqua_date(aqua_now())
     let body: string = template_fill(template_get("chemistry"),
         vars("rows", rows) + vars("today", today))
-    return aqua_page("Chemistry", body)
+    return aqua_page(req, "Chemistry", body)
 }
 
 fn chemistry_add(req: Request) Response {
@@ -607,7 +608,7 @@ fn modes_page(req: Request) Response {
     let now: u32 = aqua_now()
     let body: string = template_fill(template_get("modes"),
         vars("now", aqua_date(now)))
-    return aqua_page("Modes", body)
+    return aqua_page(req, "Modes", body)
 }
 
 fn modes_start(req: Request) Response {
@@ -648,7 +649,7 @@ fn modes_stop(req: Request) Response {
 fn events_page(req: Request) Response {
     let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
     if !opened.is_ok {
-        return aqua_page("Events", "<p>The database could not be opened.</p>")
+        return aqua_page(req, "Events", "<p>The database could not be opened.</p>")
     }
     let db: SqlDb = opened.ok
     ignore_u32(sql_apply(db, ""))
@@ -678,5 +679,5 @@ fn events_page(req: Request) Response {
     }
     let body: string = template_fill(template_get("events"),
         vars("rows", rows))
-    return aqua_page("Events", body)
+    return aqua_page(req, "Events", body)
 }
