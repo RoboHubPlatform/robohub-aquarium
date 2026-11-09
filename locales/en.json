@@ -41,5 +41,6 @@
   "settings.tab.general": "General",
   "settings.orientation": "Module tab layout",
   "settings.orientation.vertical": "Vertical",
-  "settings.orientation.horizontal": "Horizontal"
+  "settings.orientation.horizontal": "Horizontal",
+  "settings.tab.logging": "Logging"
 }

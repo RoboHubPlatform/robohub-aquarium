@@ -11,6 +11,7 @@ include "inventory"
 include "scheduler"
 include "gateway"
 include "widgets"
+include "logging"
 include "htmx"
 include "aquarium.rho"
 
@@ -102,6 +103,9 @@ fn aquarium_mesh_register() void {
     if client_id != "" {
         settings_set("aquarium.mesh_client_id", client_id)
         settings_set("aquarium.mesh_secret", secret)
+        info("aquarium.mesh", "registered as " + client_id)
+    } else {
+        warn("aquarium.mesh", "registration did not return a client id")
     }
 }
 
@@ -125,6 +129,7 @@ fn aquarium_mesh_event(req: Request) Response {
         return json(400, "{\"ok\":false,\"error\":\"topic is required\"}")
     }
     if rho_str_index_of(topic, "energy.fault") == 0 {
+        warn("aquarium", "energy fault: " + payload)
         notification_live_event("warning", "Energy: " + payload)
     } else {
         notification_live_event("info", "Mesh " + topic + ": " + payload)
@@ -133,6 +138,8 @@ fn aquarium_mesh_event(req: Request) Response {
 }
 
 fn init() void {
+    log_config_apply("aquarium")
+    info("aquarium", "starting")
     aqua_hydrate_gateway_settings()
     aquarium_mesh_register()
 }

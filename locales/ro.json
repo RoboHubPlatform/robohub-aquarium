@@ -41,5 +41,6 @@
   "settings.tab.general": "General",
   "settings.orientation": "Aspectul filelor modulelor",
   "settings.orientation.vertical": "Vertical",
-  "settings.orientation.horizontal": "Orizontal"
+  "settings.orientation.horizontal": "Orizontal",
+  "settings.tab.logging": "Jurnalizare"
 }

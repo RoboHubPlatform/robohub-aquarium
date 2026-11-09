@@ -13,6 +13,13 @@ The modules it carries share its router, port and workspace:
 Each module owns its tables and pages; the application owns the router, one main
 SQL database and the workspace the records live in.
 
+## Logging
+
+Aquarium has a Logging tab in Settings: level, text or JSON, a rotating file
+under `$XDG_STATE_HOME/robohub/aquarium/`, size, retention and stderr. The
+aquarium and its included modules share the app logger; standard error remains
+on for journald.
+
 ## Mesh client
 
 The aquarium registers with Mesh as a client of its project and subscribes to
