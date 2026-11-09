@@ -113,7 +113,43 @@ fn aqua_setting(key: string) string {
     }
     // Older installs kept one file per key; read it once so an upgrade keeps
     // the values a person already set.
-    return aqua_trim(rho_read_text(aqua_setting_file(key)))
+    let legacy: string = aqua_trim(rho_read_text(aqua_setting_file(key)))
+    if legacy != "" {
+        return legacy
+    }
+    // The provider file is the last word on the connection. A token that was
+    // put there by an earlier save or by an operator must not look absent just
+    // because the settings store was written before it.
+    let conf: string = rho_read_text(aqua_setting_file("gateway.conf"))
+    if rho_str_eq(key, "mesh_url") {
+        return gateway_config_value(conf, "url")
+    }
+    if rho_str_eq(key, "mesh_project") {
+        return gateway_config_value(conf, "project")
+    }
+    if rho_str_eq(key, "mesh_token") {
+        return gateway_config_value(conf, "token")
+    }
+    return ""
+}
+
+fn aqua_hydrate_gateway_settings() void {
+    let conf: string = rho_read_text(aqua_setting_file("gateway.conf"))
+    if conf == "" {
+        return
+    }
+    let url: string = gateway_config_value(conf, "url")
+    let project: string = gateway_config_value(conf, "project")
+    let token: string = gateway_config_value(conf, "token")
+    if url != "" && settings_get("gateway.url", "") == "" {
+        settings_set("gateway.url", url)
+    }
+    if project != "" && settings_get("gateway.project", "") == "" {
+        settings_set("gateway.project", project)
+    }
+    if token != "" && settings_get("gateway.token", "") == "" {
+        settings_set("gateway.token", token)
+    }
 }
 
 fn aqua_setting_set(key: string, value: string) void {
@@ -318,8 +354,25 @@ fn aqua_settings_form(req: Request, tab: string) string {
     fields[2] = FormField{ "mesh_token", "password",
         i18n_t(req, "settings.token"), i18n_t(req, "settings.token_hint"),
         "", false, "", "", aqua_setting("mesh_token"), "", "" }
-    return forms_open(fields, 3, "/settings?tab=gateway",
+    var form: string = forms_open(fields, 3, "/settings?tab=gateway",
         i18n_t(req, "settings.save"), i18n_locale(req))
+    var link: string = ""
+    let mesh_url: string = aqua_setting("mesh_url")
+    let mesh_project: string = aqua_setting("mesh_project")
+    if mesh_url != "" && mesh_project != "" {
+        var base: string = mesh_url
+        while rho_strlen(base) > 0 && rho_str_eq(rho_str_slice(base,
+                u32(rho_strlen(base)) - 1, 1), "/") {
+            base = rho_str_slice(base, 0, u32(rho_strlen(base)) - 1)
+        }
+        link = "<p class=\"live-meta\">Generate or copy this application's per-project token in <a href=\"" +
+            escape_html(base + "/mesh/project/" + mesh_project + "/settings") +
+            "\" target=\"_blank\" rel=\"noopener\">Mesh project settings</a>.</p>"
+    }
+    if aqua_setting("mesh_token") == "" {
+        return link + "<p class=\"notice\">A Mesh token is required before the project list can load. Generate one in Mesh project settings.</p>" + form
+    }
+    return link + form
 }
 
 fn aqua_settings_page_message(req: Request, message: string) Response {
@@ -372,9 +425,14 @@ fn aqua_settings_save(req: Request) Response {
     }
     aqua_setting_set("mesh_url", aqua_form(body, "mesh_url"))
     aqua_setting_set("mesh_project", aqua_form(body, "mesh_project"))
-    aqua_setting_set("mesh_token", aqua_form(body, "mesh_token"))
+    let posted_token: string = aqua_form(body, "mesh_token")
+    if posted_token == "" {
+        posted_token = aqua_setting("mesh_token")
+    }
+    aqua_setting_set("mesh_token", posted_token)
     aqua_write_gateway_conf()
     ignore_string(aqua_refresh_gateway())
+    aquarium_mesh_register()
     return redirect("/settings?tab=gateway")
 }
 
@@ -493,13 +551,17 @@ fn aqua_keeper_link() string {
 fn aqua_page(req: Request, title: string, body: string) Response {
     let document: string = template_fill(template_get("layout"),
         vars("title", title) + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) + vars("keeper", aqua_keeper_link()) +
-        vars("notifications", notification_embed()) + vars("forms_style", forms_style()))
+        vars("notifications", notification_embed()) + vars("forms_style", forms_style()) + vars("widgets_style", widgets_style()))
     return html(status_ok(), document)
 }
 
 /* -------------------------------------------------------------------------- */
 /*  Equipment                                                                 */
 /* -------------------------------------------------------------------------- */
+
+fn host_shell(req: Request, title: string, body: string, scripts: string) Response {
+    return aqua_page(req, title, body + scripts)
+}
 
 fn equipment_page(req: Request) Response {
     let opened: Result[SqlDb, string] = sql_open(aqua_db_path())

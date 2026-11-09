@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.3] - 2026-11-09
+
+Inventory, scheduler and widget pages now render inside the aquarium shell instead of their own layouts. Widget card CSS comes from the widgets module.
+
 ## [0.3.2] - 2026-11-08
 
 English and Romanian pages, flag-based language switching, and translated

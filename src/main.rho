@@ -56,8 +56,100 @@ fn aquarium_docs(req: Request) Response {
         vars("title", "Documentation") + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) +
         vars("keeper", aquarium_keeper_link()) +
         vars("notifications", notification_embed()) +
-        vars("forms_style", forms_style()))
+        vars("forms_style", forms_style()) +
+        vars("widgets_style", widgets_style()))
     return html(status_ok(), document)
+}
+
+fn aqua_port() string {
+    var addr: string = getenv("RHO_HTTP_ADDR")
+    if addr == "" {
+        return "8480"
+    }
+    var last: i32 = -1
+    var i: u32 = 0
+    while i < u32(rho_strlen(addr)) {
+        if rho_str_eq(rho_str_slice(addr, i, 1), ":") {
+            last = i32(i)
+        }
+        i = i + 1
+    }
+    if last >= 0 {
+        return rho_str_slice(addr, u32(last) + 1,
+            u32(rho_strlen(addr)) - u32(last) - 1)
+    }
+    return addr
+}
+
+fn aqua_base_url() string {
+    return "http://127.0.0.1:" + aqua_port()
+}
+
+fn aquarium_instance_id() string {
+    let id: string = settings_get("aquarium.instance_id", "")
+    if id == "" {
+        return "aquarium-" + aqua_port()
+    }
+    return id
+}
+
+fn aquarium_mesh_register() void {
+    let response: string = gateway_register_client("robohub-aquarium",
+        aquarium_instance_id(), aqua_base_url() + "/api/aquarium/mesh/events",
+        "energy.fault,energy.mode")
+    let client_id: string = aqua_json_string_field(response, "client_id")
+    let secret: string = aqua_json_string_field(response, "secret")
+    if client_id != "" {
+        settings_set("aquarium.mesh_client_id", client_id)
+        settings_set("aquarium.mesh_secret", secret)
+    }
+}
+
+fn aquarium_heartbeat() void {
+    let client_id: string = settings_get("aquarium.mesh_client_id", "")
+    if client_id != "" {
+        ignore_string(gateway_client_heartbeat(client_id))
+    }
+}
+
+fn aquarium_mesh_event(req: Request) Response {
+    let secret: string = settings_get("aquarium.mesh_secret", "")
+    let auth: string = header_str(req, "Authorization")
+    if secret == "" || !rho_str_eq(auth, "Bearer " + secret) {
+        return json(401, "{\"ok\":false,\"error\":\"unauthorized\"}")
+    }
+    let body: string = request_body(req)
+    let topic: string = aqua_json_string_field(body, "topic")
+    let payload: string = aqua_json_string_field(body, "payload")
+    if topic == "" {
+        return json(400, "{\"ok\":false,\"error\":\"topic is required\"}")
+    }
+    if rho_str_index_of(topic, "energy.fault") == 0 {
+        notification_live_event("warning", "Energy: " + payload)
+    } else {
+        notification_live_event("info", "Mesh " + topic + ": " + payload)
+    }
+    return json(status_ok(), "{\"ok\":true}")
+}
+
+fn init() void {
+    aqua_hydrate_gateway_settings()
+    aquarium_mesh_register()
+}
+
+fn background() void {
+    var ticks: u32 = 0
+    while true {
+        ticks = ticks + 1
+        if ticks % 15 == 0 {
+            if settings_get("aquarium.mesh_client_id", "") == "" {
+                aquarium_mesh_register()
+            } else {
+                aquarium_heartbeat()
+            }
+        }
+        ignore_u32(rho_exec("sleep", "2", "/dev/null"))
+    }
 }
 
 fn aquarium_home(req: Request) Response {
@@ -67,6 +159,9 @@ fn aquarium_home(req: Request) Response {
         vars("title", "Aquarium") + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) +
         vars("keeper", aquarium_keeper_link()) +
         vars("notifications", notification_embed()) +
-        vars("forms_style", forms_style()))
+        vars("forms_style", forms_style()) +
+        vars("widgets_style", widgets_style()))
     return html(status_ok(), document)
 }
+
+route POST "/api/aquarium/mesh/events" => aquarium_mesh_event

@@ -8,7 +8,7 @@
 module:
   name: aquarium
   type: rho
-  version: 0.3.2
+  version: 0.3.3
   kind: keeper-hosted
   title: Aquarium
   description: >
@@ -67,6 +67,9 @@ plugins:
 # The application has a database, so the SQL port is generated for it. The
 # tables it uses are the module's; the host's own schema may grow with the
 # aquarium domain.
+requires:
+  - name: rho/sqlite
+
 sql:
   driver: rho-sql-sqlite
   schema: db/schema.sql

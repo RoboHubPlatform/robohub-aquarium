@@ -13,6 +13,18 @@ The modules it carries share its router, port and workspace:
 Each module owns its tables and pages; the application owns the router, one main
 SQL database and the workspace the records live in.
 
+## Mesh client
+
+The aquarium registers with Mesh as a client of its project and subscribes to
+`energy.fault` and `energy.mode`. Mesh delivers those messages to the
+secret-authenticated callback at `/api/aquarium/mesh/events`, where an energy
+fault becomes a warning toast. Registration and heartbeat use the same
+`mesh-gateway` token as the rest of the gateway reads. The token is per application and per
+project: generate it in Mesh project settings (Application tokens), choose its
+lifetime, and copy it here. It expires; generate a new one when it does. The
+token is read back from `gateway.conf` if the settings store does not have it,
+and a blank token field on save preserves the existing one.
+
 ## Dashboard and equipment
 
 The home page is a dashboard: widgets are cards, and the equipment, automation,
