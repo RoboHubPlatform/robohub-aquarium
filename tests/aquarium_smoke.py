@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -18,6 +19,7 @@ APP = HERE.parents[1]
 ROBOHUB = APP.parents[1]
 PROJECTS = ROBOHUB.parent
 RHO = PROJECTS / "rho" / "bin" / "rho"
+SESSION = "smoke-session"
 
 
 def free_port() -> int:
@@ -30,7 +32,8 @@ def wait_for(base: str) -> None:
     deadline = time.time() + 20
     while time.time() < deadline:
         try:
-            with urllib.request.urlopen(base + "/", timeout=1) as response:
+            request = urllib.request.Request(base + "/healthz")
+            with urllib.request.urlopen(request, timeout=1) as response:
                 if response.status == 200:
                     return
         except (urllib.error.URLError, ConnectionError):
@@ -39,7 +42,9 @@ def wait_for(base: str) -> None:
 
 
 def get(base: str, path: str) -> str:
-    with urllib.request.urlopen(base + path, timeout=10) as response:
+    request = urllib.request.Request(base + path)
+    request.add_header("Cookie", f"keeper_session={SESSION}")
+    with urllib.request.urlopen(request, timeout=10) as response:
         return response.read().decode("utf-8", "replace")
 
 
@@ -47,8 +52,16 @@ def post(base: str, path: str, fields: dict) -> str:
     body = urllib.parse.urlencode(fields).encode()
     request = urllib.request.Request(base + path, data=body, method="POST")
     request.add_header("Content-Type", "application/x-www-form-urlencoded")
+    request.add_header("Cookie", f"keeper_session={SESSION}")
     with urllib.request.urlopen(request, timeout=20) as response:
         return response.read().decode("utf-8", "replace")
+
+
+def csrf(base: str, path: str = "/widgets") -> str:
+    match = re.search(r'name="csrf" value="([^"]+)"', get(base, path))
+    if not match:
+        raise AssertionError(f"no CSRF token on {path}")
+    return match.group(1)
 
 
 def assert_contains(haystack: str, needles: list, label: str) -> None:
@@ -79,6 +92,12 @@ def main() -> int:
         env["ROBOHUB_APP_WORKSPACE"] = workspace
         env["ROBOHUB_APP_MANIFEST"] = str(APP / "module.yml")
         env["RHO_HTTP_ADDR"] = f":{port}"
+        home = Path(workspace) / "home"
+        sessions = home / ".rho" / "keeper"
+        sessions.mkdir(parents=True, exist_ok=True)
+        (sessions / "auth-sessions.txt").write_text(
+            f"{SESSION}|{int(time.time()) + 3600}|smoke\n", encoding="utf-8")
+        env["HOME"] = str(home)
         process = subprocess.Popen([str(binary)], cwd=APP, env=env,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True)
@@ -86,8 +105,7 @@ def main() -> int:
             wait_for(base)
             for page in ["/expenses", "/scheduler", "/widgets", "/equipment",
                          "/automation", "/chemistry", "/modes", "/events"]:
-                if urllib.request.urlopen(base + page, timeout=10).status != 200:
-                    raise AssertionError(f"{page} did not answer")
+                get(base, page)
 
             post(base, "/equipment/add", {"name": "Return pump", "kind": "pump", "state": "off"})
             assert_contains(get(base, "/equipment"), ["Return pump", "pump"], "equipment")
@@ -112,6 +130,7 @@ def main() -> int:
             post(base, "/widgets/add", {
                 "title": "Water temperature", "kind": "numeric",
                 "source_kind": "manual", "unit": "C",
+                "csrf": csrf(base),
             })
             post(base, "/widgets/value", {"id": "1", "value": "25.4"})
             assert_contains(get(base, "/"), ["Water temperature", "25.4"], "dashboard")
