@@ -186,15 +186,13 @@ fn aqua_write_gateway_conf() void {
     var conf: string = "provider=mesh-gateway;transport=mesh"
     let url: string = aqua_setting("mesh_url")
     let project: string = aqua_setting("mesh_project")
-    let token: string = aqua_setting("mesh_token")
+    // No token is kept: the provider asks for a short-lived service token for
+    // Mesh with the credential keeper gave this application.
     if url != "" {
         conf = gateway_config_set(conf, "url", url)
     }
     if project != "" {
         conf = gateway_config_set(conf, "project", project)
-    }
-    if token != "" {
-        conf = gateway_config_set(conf, "token", token)
     }
     ignore_bool(rho_write_text(aqua_setting_file("gateway.conf"), conf))
 }

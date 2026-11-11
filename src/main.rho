@@ -144,18 +144,23 @@ fn init() void {
     aquarium_mesh_register()
 }
 
+// background follows the project's live stream and refreshes the widgets when a
+// reading arrives, and keeps the Mesh registration alive every 30 seconds.
 fn background() void {
     var ticks: u32 = 0
     while true {
         ticks = ticks + 1
-        if ticks % 15 == 0 {
+        if widgets_live_changed() {
+            ignore_u32(widgets_refresh_all())
+        }
+        if ticks % 60 == 0 {
             if settings_get("aquarium.mesh_client_id", "") == "" {
                 aquarium_mesh_register()
             } else {
                 aquarium_heartbeat()
             }
         }
-        ignore_u32(rho_exec("sleep", "2", "/dev/null"))
+        rho_sleep_ms(500)
     }
 }
 
