@@ -18,11 +18,9 @@ targets:
         options:
           issuer: keeper
           audience: aquarium
-          cookie: keeper_session
           public_key: ~/.rho/auth/public.pem
           mode: direct
-          session_file: ~/.rho/keeper/auth-sessions.txt
-          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/expenses,/api/expenses,/widgets,/api/widgets,/notifications/stream,/api/aquarium/mesh/events,/docs"
+          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/api/aquarium/mesh/events,/docs"
           login_url: "/auth/login?audience=aquarium"
           scheme: auto
     files:

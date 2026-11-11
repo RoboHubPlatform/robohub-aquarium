@@ -43,7 +43,7 @@ fn aquarium_keeper_link() string {
 }
 
 fn aquarium_docs(req: Request) Response {
-    let root: string = getenv("ROBOHUB_WORKSPACE")
+    let root: string = getenv("ROBOHUB_ROOT")
     var path: string = "applications/aquarium/docs/index.md"
     if root != "" {
         path = root + "/applications/aquarium/docs/index.md"

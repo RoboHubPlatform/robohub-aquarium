@@ -99,6 +99,8 @@ deps:
 deploy:
   port: 8480
   service: aquarium
+  # The services it calls; keeper registers it as a client for these alone.
+  calls: [mesh]
 
 docs:
   title: Aquarium
