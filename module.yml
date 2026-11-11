@@ -7,7 +7,9 @@
 #
 module:
   name: aquarium
-  id: robohub.applications.aquarium
+  id: robohub.app.aquarium
+  previous_ids:
+    - robohub.applications.aquarium
   type: rho
   version: 0.3.3
   kind: keeper-hosted

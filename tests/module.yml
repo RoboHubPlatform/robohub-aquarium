@@ -1,6 +1,8 @@
 module:
   name: aquarium-tests
-  id: robohub.applications.aquarium.tests
+  id: robohub.app.aquarium-tests
+  previous_ids:
+    - robohub.applications.aquarium.tests
   type: rho
   version: 0.1.0
 
