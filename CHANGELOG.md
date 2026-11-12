@@ -103,3 +103,7 @@ Inventory, scheduler and widget pages now render inside the aquarium shell inste
 ## [0.3.4] - 2026-11-12
 
 The smoke test signs in with a keeper ticket, as the keeper issues them.
+
+## [0.4.0] - 2026-11-12
+
+Aquarium reaches Mesh through the gateway interface, binding the Mesh provider with Mesh's address and the project in `module.yml`. The Settings page writes those into the binding's settings for the installation; the `mesh-gateway` plugin entry, the contract include and `gateway.conf` are gone.

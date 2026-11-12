@@ -117,30 +117,24 @@ fn aqua_setting(key: string) string {
     if legacy != "" {
         return legacy
     }
-    // The provider file is the last word on the connection. A token that was
-    // put there by an earlier save or by an operator must not look absent just
-    // because the settings store was written before it.
-    let conf: string = rho_read_text(aqua_setting_file("gateway.conf"))
+    // The gateway's own settings are the last word on the connection: the
+    // binding's defaults, or what this page saved into them.
     if rho_str_eq(key, "mesh_url") {
-        return gateway_config_value(conf, "url")
+        return gateway.config("url")
     }
     if rho_str_eq(key, "mesh_project") {
-        return gateway_config_value(conf, "project")
+        return gateway.config("project")
     }
     if rho_str_eq(key, "mesh_token") {
-        return gateway_config_value(conf, "token")
+        return gateway.token()
     }
     return ""
 }
 
 fn aqua_hydrate_gateway_settings() void {
-    let conf: string = rho_read_text(aqua_setting_file("gateway.conf"))
-    if conf == "" {
-        return
-    }
-    let url: string = gateway_config_value(conf, "url")
-    let project: string = gateway_config_value(conf, "project")
-    let token: string = gateway_config_value(conf, "token")
+    let url: string = gateway.config("url")
+    let project: string = gateway.config("project")
+    let token: string = gateway.token()
     if url != "" && settings_get("gateway.url", "") == "" {
         settings_set("gateway.url", url)
     }
@@ -179,43 +173,39 @@ fn aqua_curl(url: string, report_name: string) string {
     return rho_read_text(report)
 }
 
-// The gateway provider is chosen by the app's `plugins:` block. The settings
-// this page keeps are the provider's config; they are written to gateway.conf,
-// which the contract merges over the manifest's defaults.
+// The gateway is the provider this application binds. The settings this page
+// keeps are the provider's own — Mesh's address and the project — written into
+// the binding's settings for this installation.
 fn aqua_write_gateway_conf() void {
-    var conf: string = "provider=mesh-gateway;transport=mesh"
     let url: string = aqua_setting("mesh_url")
     let project: string = aqua_setting("mesh_project")
     // No token is kept: the provider asks for a short-lived service token for
     // Mesh with the credential keeper gave this application.
-    if url != "" {
-        conf = gateway_config_set(conf, "url", url)
+    if url != "" && !rho_str_eq(url, gateway.config("url")) {
+        ignore_bool(gateway.configure("url", url))
     }
-    if project != "" {
-        conf = gateway_config_set(conf, "project", project)
+    if project != "" && !rho_str_eq(project, gateway.config("project")) {
+        ignore_bool(gateway.configure("project", project))
     }
-    ignore_bool(rho_write_text(aqua_setting_file("gateway.conf"), conf))
 }
 
 fn aqua_ensure_gateway_conf() void {
-    if !rho_path_exists(aqua_setting_file("gateway.conf")) {
-        aqua_write_gateway_conf()
-    }
+    aqua_write_gateway_conf()
 }
 
 fn aqua_refresh_gateway() string {
     aqua_ensure_gateway_conf()
-    let gateway: string = gateway_gateway()
-    if gateway != "" {
-        ignore_bool(rho_write_text(aqua_setting_file("gateway_url"), gateway))
-        return gateway
+    let resolved: string = gateway.gateway()
+    if resolved != "" {
+        ignore_bool(rho_write_text(aqua_setting_file("gateway_url"), resolved))
+        return resolved
     }
     return aqua_setting("gateway_url")
 }
 
 fn aqua_gateway_project_choices() string {
     var out: string = ""
-    let text: string = gateway_projects()
+    let text: string = gateway.projects()
     if text == "" {
         return out
     }
@@ -337,13 +327,13 @@ fn aqua_settings_form(req: Request, tab: string) string {
     if rho_str_eq(tab, "configuration") {
         let url: string = aqua_setting("mesh_url")
         let project: string = aqua_setting("mesh_project")
-        let gateway: string = aqua_refresh_gateway()
+        let resolved: string = aqua_refresh_gateway()
         return "<dl class=\"settings\"><dt>Application</dt><dd>aquarium</dd>" +
             "<dt>Route</dt><dd>/</dd><dt>Port</dt><dd>8480</dd>" +
-            "<dt>Gateway provider</dt><dd>mesh-gateway</dd>" +
+            "<dt>Gateway provider</dt><dd>" + escape_html(gateway.provider()) + "</dd>" +
             "<dt>Gateway URL</dt><dd>" + escape_html(url) + "</dd>" +
             "<dt>Gateway project</dt><dd>" + escape_html(project) + "</dd>" +
-            "<dt>Resolved gateway</dt><dd>" + escape_html(gateway) + "</dd>" +
+            "<dt>Resolved gateway</dt><dd>" + escape_html(resolved) + "</dd>" +
             "<dt>Modules</dt><dd>inventory, scheduler, widgets</dd></dl>"
     }
     var fields: FormField[3]

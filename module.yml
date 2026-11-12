@@ -11,7 +11,7 @@ module:
   previous_ids:
     - robohub.applications.aquarium
   type: rho
-  version: 0.3.4
+  version: 0.4.0
   kind: keeper-hosted
   title: Aquarium
   description: >
@@ -49,10 +49,8 @@ modules:
     route: /widgets
     enabled: true
 
-# The gateway provider this application uses. Aquarium does not know Mesh's
-# API; it asks the gateway contract, and this plugin answers. Another provider
-# is enabled here by name, and the settings page overrides its config through
-# gateway.conf.
+# The plugins this application uses: how it signs a person in. Mesh is reached
+# through the gateway interface, bound below.
 plugins:
   - name: robohub-auth
     enabled: true
@@ -60,12 +58,6 @@ plugins:
       issuer: keeper
       mode: direct
       login_url: "http://127.0.0.1:19090/auth/login"
-  - name: mesh-gateway
-    enabled: true
-    config:
-      url: "http://127.0.0.1:8478"
-      project: "default"
-      token: ""
 
 # The application has a database, so the SQL port is generated for it. The
 # tables it uses are the module's; the host's own schema may grow with the
@@ -94,8 +86,20 @@ deps:
     scheduler: ">=0.1.0"
     widgets: ">=0.1.0"
     robohub-auth: ">=0.1.0"
-    mesh-gateway: ">=0.1.0"
-    robohub-contract-gateway: ">=0.1.0"
+    robohub-gateway: ">=1.0.0"
+    robohub-provider-mesh: ">=0.3.0"
+
+# The gateway this application reaches the mesh through, and its settings. The
+# Settings page changes them on a running installation (bind.conf in the
+# application's workspace); these are the defaults.
+bind:
+  robohub.gateway:
+    providers:
+      - robohub-provider-mesh
+    config:
+      robohub-provider-mesh:
+        url: "http://127.0.0.1:8478"
+        project: "default"
 
 deploy:
   port: 8480

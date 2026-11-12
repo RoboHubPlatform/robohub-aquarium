@@ -25,12 +25,11 @@ on for journald.
 The aquarium registers with Mesh as a client of its project and subscribes to
 `energy.fault` and `energy.mode`. Mesh delivers those messages to the
 secret-authenticated callback at `/api/aquarium/mesh/events`, where an energy
-fault becomes a warning toast. Registration and heartbeat use the same
-`mesh-gateway` token as the rest of the gateway reads. The token is per application and per
-project: generate it in Mesh project settings (Application tokens), choose its
-lifetime, and copy it here. It expires; generate a new one when it does. The
-token is read back from `gateway.conf` if the settings store does not have it,
-and a blank token field on save preserves the existing one.
+fault becomes a warning toast. Registration and heartbeat go through the gateway
+interface like every other read, each request carrying the application's
+short-lived service token for Mesh, scoped to the project. Mesh's address and
+the project are the gateway binding's settings; the Settings page changes them
+on a running installation.
 
 ## Dashboard and equipment
 

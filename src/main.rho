@@ -9,7 +9,6 @@ include "db/models.rho"
 include "db/queries.rho"
 include "inventory"
 include "scheduler"
-include "robohub-contract-gateway"
 include "widgets"
 include "logging"
 include "htmx"
@@ -19,6 +18,7 @@ import std.sql
 import std.web.http
 import std.web.template
 import rho.log
+import robohub.gateway
 
 route GET "/" => aquarium_home
 route GET "/docs" => aquarium_docs
@@ -90,7 +90,7 @@ fn aquarium_instance_id() string {
 }
 
 fn aquarium_mesh_register() void {
-    let response: string = gateway_register_client("robohub-aquarium",
+    let response: string = gateway.register_client("robohub-aquarium",
         aquarium_instance_id(), aqua_base_url() + "/api/aquarium/mesh/events",
         "energy.fault,energy.mode")
     let client_id: string = aqua_json_string_field(response, "client_id")
@@ -107,7 +107,7 @@ fn aquarium_mesh_register() void {
 fn aquarium_heartbeat() void {
     let client_id: string = settings_get("aquarium.mesh_client_id", "")
     if client_id != "" {
-        ignore_string(gateway_client_heartbeat(client_id))
+        ignore_string(gateway.client_heartbeat(client_id))
     }
 }
 
