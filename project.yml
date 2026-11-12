@@ -1,14 +1,9 @@
-version: 1
-
-output_dir: build/generated
-build_dir: build
+# What the aquarium go-server target has that the toolchain's built-in one does
+# not. The files, the kind, the router and the output folders are the built-in
+# target's.
 
 targets:
   - id: go-server
-    emitter: go
-    kind: server
-    description: Aquarium HTTP service
-    router: serveMux
     ports:
       - logemit
     api:
@@ -23,47 +18,12 @@ targets:
           skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/api/aquarium/mesh/events,/docs"
           login_url: "/auth/login?audience=aquarium"
           scheme: auto
-    files:
-      - path: app.go
-        role: implementation
-      - path: runtime.go
-        role: runtime
-      - path: server.go
-        role: server
-      - path: main.go
-        role: entrypoint
-      - path: go.mod
-        role: build
-      - path: static
-        kind: dir
     default_locale: en
     locales:
       - locale: en
         file: locales/en.json
       - locale: ro
         file: locales/ro.json
+    # Every file under templates/ is a template, named by its file name.
     templates:
-      - name: layout
-        file: templates/layouts/layout.html
-      - name: home
-        file: templates/pages/home.html
-      - name: settings
-        file: templates/pages/settings.html
-      - name: modes
-        file: templates/pages/modes.html
-      - name: equipment
-        file: templates/pages/equipment.html
-      - name: equipment-row
-        file: templates/rows/equipment-row.html
-      - name: automation
-        file: templates/pages/automation.html
-      - name: automation-row
-        file: templates/rows/automation-row.html
-      - name: chemistry
-        file: templates/pages/chemistry.html
-      - name: chemistry-row
-        file: templates/rows/chemistry-row.html
-      - name: events
-        file: templates/pages/events.html
-      - name: events-row
-        file: templates/rows/events-row.html
+      - dir: templates
