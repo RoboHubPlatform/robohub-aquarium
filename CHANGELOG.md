@@ -99,3 +99,7 @@ single module-tab layout preference.
 ## [0.3.3] - 2026-11-09
 
 Inventory, scheduler and widget pages now render inside the aquarium shell instead of their own layouts. Widget card CSS comes from the widgets module.
+
+## [0.3.4] - 2026-11-12
+
+The smoke test signs in with a keeper ticket, as the keeper issues them.

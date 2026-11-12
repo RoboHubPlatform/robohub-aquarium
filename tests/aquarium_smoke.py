@@ -19,6 +19,38 @@ APP = HERE.parents[1]
 ROBOHUB = APP.parents[1]
 PROJECTS = ROBOHUB.parent
 RHO = PROJECTS / "rho" / "bin" / "rho"
+
+# The bearer ticket every request carries: one the keeper would issue for the
+# host, minted by the test with a key pair of its own (see mint_token).
+TOKEN = ""
+
+
+def mint_token(home: str, audience: str) -> str:
+    """A ticket for the host, as the keeper would issue one.
+
+    The host verifies tickets against ~/.rho/auth/public.pem in its own home,
+    so the test makes a key pair there and signs the ticket with it.
+    """
+    rho = str(RHO) if RHO.exists() else "rho"
+    keys = os.path.join(home, ".rho", "auth")
+    os.makedirs(keys, exist_ok=True)
+    subprocess.run([rho, "auth", "keygen", "--dir", keys, "--force"],
+                   check=True, capture_output=True, text=True)
+    result = subprocess.run(
+        [rho, "auth", "ticket", "--private", os.path.join(keys, "private.pem"),
+         "--issuer", "keeper", "--audience", audience, "--subject", "smoke",
+         "--scopes", "*", "--ttl", "1h"],
+        check=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def open_url(target, timeout: float = 10):
+    """urlopen with the test's ticket, which every page of the host asks for."""
+    request = target if isinstance(target, urllib.request.Request) else urllib.request.Request(target)
+    if TOKEN:
+        request.add_header("Authorization", f"Bearer {TOKEN}")
+    return urllib.request.urlopen(request, timeout=timeout)
+
 SESSION = "smoke-session"
 
 
@@ -33,7 +65,7 @@ def wait_for(base: str) -> None:
     while time.time() < deadline:
         try:
             request = urllib.request.Request(base + "/healthz")
-            with urllib.request.urlopen(request, timeout=1) as response:
+            with open_url(request, timeout=1) as response:
                 if response.status == 200:
                     return
         except (urllib.error.URLError, ConnectionError):
@@ -44,7 +76,7 @@ def wait_for(base: str) -> None:
 def get(base: str, path: str) -> str:
     request = urllib.request.Request(base + path)
     request.add_header("Cookie", f"keeper_session={SESSION}")
-    with urllib.request.urlopen(request, timeout=10) as response:
+    with open_url(request, timeout=10) as response:
         return response.read().decode("utf-8", "replace")
 
 
@@ -53,7 +85,7 @@ def post(base: str, path: str, fields: dict) -> str:
     request = urllib.request.Request(base + path, data=body, method="POST")
     request.add_header("Content-Type", "application/x-www-form-urlencoded")
     request.add_header("Cookie", f"keeper_session={SESSION}")
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with open_url(request, timeout=20) as response:
         return response.read().decode("utf-8", "replace")
 
 
@@ -98,6 +130,10 @@ def main() -> int:
         (sessions / "auth-sessions.txt").write_text(
             f"{SESSION}|{int(time.time()) + 3600}|smoke\n", encoding="utf-8")
         env["HOME"] = str(home)
+        global TOKEN
+        auth_home = env.get("HOME") if env.get("HOME", "").startswith(tempfile.gettempdir()) else tempfile.mkdtemp(prefix="aquarium-home-")
+        env["HOME"] = auth_home
+        TOKEN = mint_token(auth_home, "aquarium")
         process = subprocess.Popen([str(binary)], cwd=APP, env=env,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True)
