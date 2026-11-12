@@ -95,6 +95,7 @@ deps:
     widgets: ">=0.1.0"
     robohub-auth: ">=0.1.0"
     mesh-gateway: ">=0.1.0"
+    robohub-contract-gateway: ">=0.1.0"
 
 deploy:
   port: 8480
@@ -109,3 +110,7 @@ docs:
   index: docs/index.md
   sources:
     - docs/index.md
+
+# The application's own documentation page, embedded at build time.
+assets:
+  - docs/index.md

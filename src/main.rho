@@ -9,7 +9,7 @@ include "db/models.rho"
 include "db/queries.rho"
 include "inventory"
 include "scheduler"
-include "gateway"
+include "robohub-contract-gateway"
 include "widgets"
 include "logging"
 include "htmx"
@@ -43,14 +43,9 @@ fn aquarium_keeper_link() string {
 }
 
 fn aquarium_docs(req: Request) Response {
-    let root: string = getenv("ROBOHUB_ROOT")
-    var path: string = "applications/aquarium/docs/index.md"
-    if root != "" {
-        path = root + "/applications/aquarium/docs/index.md"
-    }
-    var content: string = "No documentation found."
-    if rho_path_exists(path) {
-        content = rho_read_text(path)
+    var content: string = rho_asset("aquarium", "docs/index.md")
+    if content == "" {
+        content = "No documentation found."
     }
     let body: string = "<h1>Documentation</h1><pre class=\"docs\">" + escape_html(content) + "</pre>"
     let document: string = template_fill(template_get("layout"),

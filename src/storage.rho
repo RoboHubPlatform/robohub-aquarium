@@ -1,5 +1,8 @@
 module aquarium
 
+// The application's own files, embedded at build time.
+extern fn rho_asset(module: string, path: string) string
+
 // The host functions the application and its modules use. Included rather than
 // imported so the generated SQL port sees the extern names it implements.
 

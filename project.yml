@@ -42,26 +42,6 @@ targets:
         file: locales/en.json
       - locale: ro
         file: locales/ro.json
-      - locale: en
-        file: ../../modules/i18n/locales/en.json
-      - locale: ro
-        file: ../../modules/i18n/locales/ro.json
-      - locale: en
-        file: ../../modules/widgets/locales/en.json
-      - locale: ro
-        file: ../../modules/widgets/locales/ro.json
-      - locale: en
-        file: ../../modules/inventory/locales/en.json
-      - locale: ro
-        file: ../../modules/inventory/locales/ro.json
-      - locale: en
-        file: ../../modules/scheduler/locales/en.json
-      - locale: ro
-        file: ../../modules/scheduler/locales/ro.json
-      - locale: en
-        file: ../../modules/forms/locales/en.json
-      - locale: ro
-        file: ../../modules/forms/locales/ro.json
     templates:
       - name: layout
         file: templates/layouts/layout.html
