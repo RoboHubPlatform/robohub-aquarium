@@ -28,6 +28,8 @@ struct AppapiValues {
     updatedAt: i64
 }
 
+// The newest 5000 points of the window, oldest first: a long window shows its
+// recent end rather than stopping where it began.
 struct ListAppapiPointsRow {
     at: i64
     value: f64
@@ -116,6 +118,12 @@ struct JournalEntries {
     actor: string
     message: string
     resolvedAt: i64
+}
+
+// How many entries are still open, counted rather than read: the badge is not
+// capped at the rows a page reads.
+struct CountOpenJournalEntriesRow {
+    entries: string
 }
 
 // A rule: when `when_expr` holds (for for_s seconds, when set), run do_actions; when it stops holding — or, with clear_expr, when that holds — run else_actions. A rule fires at most once per cooldown_s. origin is preset (from the application's presets, kept current by them) or person. state is idle, pending or active; state_since and last_fired are Unix seconds.

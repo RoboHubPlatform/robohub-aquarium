@@ -160,3 +160,7 @@ The clock is read from the process (`rho_now_s`, rho 0.6.0) instead of from `dat
 ## [0.5.3] - 2026-11-13
 
 A form that changed something sends the browser back to its page by GET: reloading the page after logging a test, a dose, a water change, livestock, a tank or a device mapping no longer does it again — a second kit used up, the water-change chore completed twice. A water test with one value that is not a number keeps none of them, so sending it again corrected logs nothing twice.
+
+## [0.5.4] - 2026-11-13
+
+Built on the shared modules' fixes: cron chores read as cron, rule durations with decimals and days, a mode ended once, the journal badge past 500, the newest history points, inventory totals in 64 bits and decimal commas, no blank notification.

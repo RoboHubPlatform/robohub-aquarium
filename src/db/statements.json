@@ -105,7 +105,8 @@
     },
     {
       "name": "sql_list_appapi_points",
-      "sql": "SELECT at, value FROM appapi_history\nWHERE id = ?1 AND at \u003e= ?2 AND at \u003c= ?3\nORDER BY at\nLIMIT 5000",
+      "comment": "The newest 5000 points of the window, oldest first: a long window shows its\nrecent end rather than stopping where it began.",
+      "sql": "SELECT at, value FROM (\n    SELECT at, value FROM appapi_history\n    WHERE id = ?1 AND at \u003e= ?2 AND at \u003c= ?3\n    ORDER BY at DESC\n    LIMIT 5000\n) ORDER BY at",
       "parameters": [
         {
           "name": "id",
@@ -1197,6 +1198,20 @@
           "column": "resolved_at",
           "goType": "int64",
           "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_count_open_journal_entries",
+      "comment": "How many entries are still open, counted rather than read: the badge is not\ncapped at the rows a page reads.",
+      "sql": "SELECT COUNT(*) AS entries FROM journal_entries WHERE resolved_at = 0 AND level \u003c\u003e 'info'",
+      "result": "CountOpenJournalEntriesRow",
+      "fields": [
+        {
+          "name": "entries",
+          "column": "entries",
+          "goType": "string",
+          "text": true
         }
       ]
     },
