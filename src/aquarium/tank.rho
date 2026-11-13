@@ -57,7 +57,7 @@ fn tank_page_message(req: Request, tank: AquaTank, message: string) Response {
         "<form method=\"post\" action=\"/tank/add\" class=\"aq-form grid-form\">" + forms_csrf_field() +
         aqua_tank_fields(req, aqua_no_tank()) +
         "<div><button>" + i18n_t(req, "tank.add") + "</button></div></form></section>"
-    return host_shell(req, i18n_t(req, "tank.title"), body, aqua_toast(message))
+    return host_shell(req, i18n_t(req, "tank.title"), body, appshell_toast(message))
 }
 
 fn aqua_tank_fields(req: Request, tank: AquaTank) string {

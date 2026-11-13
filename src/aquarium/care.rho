@@ -64,7 +64,7 @@ fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
         "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "dosing.product") + "</th><th>" +
         i18n_t(req, "dosing.amount") + "</th><th>" + i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + rows +
         "</tbody></table></section>"
-    return host_shell(req, i18n_t(req, "dosing.title"), body, aqua_toast(message))
+    return host_shell(req, i18n_t(req, "dosing.title"), body, appshell_toast(message))
 }
 
 fn dosing_add(req: Request) Response {
@@ -170,7 +170,7 @@ fn livestock_page_message(req: Request, tank: AquaTank, message: string) Respons
         "<table><thead><tr><th>" + i18n_t(req, "livestock.species") + "</th><th>" + i18n_t(req, "livestock.count") +
         "</th><th>" + i18n_t(req, "livestock.lost") + "</th><th>" + i18n_t(req, "livestock.added") + "</th><th>" +
         i18n_t(req, "water.note") + "</th><th></th></tr></thead><tbody>" + rows + "</tbody></table></section>"
-    return host_shell(req, i18n_t(req, "livestock.title"), body, aqua_toast(message))
+    return host_shell(req, i18n_t(req, "livestock.title"), body, appshell_toast(message))
 }
 
 fn livestock_add(req: Request) Response {

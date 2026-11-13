@@ -235,7 +235,7 @@ fn equipment_page(req: Request) Response {
         table + "</tbody></table><p class=\"hint\">" + i18n_t(req, "equipment.hint") + " <a href=\"/expenses\">" +
         i18n_t(req, "nav.inventory") + "</a>. " + i18n_t(req, "equipment.roles_hint") + " <a href=\"/devices\">" +
         i18n_t(req, "nav.devices") + "</a>.</p></section>"
-    return host_shell(req, i18n_t(req, "equipment.title"), body, aqua_toast(request_query_param(req, "msg")))
+    return host_shell(req, i18n_t(req, "equipment.title"), body, appshell_toast(request_query_param(req, "msg")))
 }
 
 fn equipment_switch(req: Request) Response {
@@ -441,5 +441,5 @@ fn aquarium_home(req: Request) Response {
         vars("chart", aqua_temperature_chart(req, tank)) +
         vars("care", aqua_care_rows(req)) +
         vars("journal", aqua_journal_rows()))
-    return host_shell(req, tank.name, body, aqua_toast(request_query_param(req, "msg")))
+    return host_shell(req, tank.name, body, appshell_toast(request_query_param(req, "msg")))
 }

@@ -31,6 +31,7 @@ include "widgets"
 include "journal"
 include "rules"
 include "appapi"
+include "appshell"
 include "logging"
 include "htmx"
 include "aquarium/core.rho"
@@ -40,7 +41,6 @@ include "aquarium/water.rho"
 include "aquarium/care.rho"
 include "aquarium/tank.rho"
 include "aquarium/devices.rho"
-include "aquarium/settings.rho"
 include "aquarium/migrate.rho"
 
 import std.sql
@@ -51,7 +51,6 @@ import robohub.gateway
 import robohub.simulator
 
 route GET  "/"                   => aquarium_home
-route GET  "/docs"               => aquarium_docs
 route GET  "/equipment"          => equipment_page
 route POST "/equipment/switch"   => equipment_switch
 route GET  "/water"              => water_page
@@ -68,8 +67,6 @@ route POST "/devices"            => devices_save
 route GET  "/tank"               => tank_page
 route POST "/tank"               => tank_save
 route POST "/tank/add"           => tank_add
-route GET  "/settings"           => aqua_settings_page
-route POST "/settings"           => aqua_settings_save
 // The pages of 0.4, where their work is now.
 route GET  "/chemistry"          => old_chemistry
 route GET  "/automation"         => old_automation

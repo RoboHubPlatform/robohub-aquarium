@@ -188,3 +188,7 @@ Several tanks, each with its own equipment, rules and chores.
 ## [0.6.1] - 2026-11-13
 
 Built on rules 0.1.4: a rule whose action fails says so once and tries again a minute later, even when the temperature hovers at its threshold.
+
+## [0.6.2] - 2026-11-14
+
+The settings page, the docs page and the shell's top bar are the shared appshell module's (robohub/modules/appshell 0.1.0); the aquarium keeps its rail, its feeding button and its layout, and answers host_app() and host_app_title(). Its own copy of the settings page and the strings only it used are gone.

@@ -137,15 +137,6 @@ fn aqua_after_post(path: string, tank: AquaTank, tab: string, message: string) R
     return redirect(target + "&msg=" + aqua_url_encode(message))
 }
 
-// aqua_toast is the script that shows a message once the page has loaded.
-fn aqua_toast(message: string) string {
-    if message == "" {
-        return ""
-    }
-    return "<script>document.addEventListener(\"DOMContentLoaded\",function(){if(window.rhoToast){window.rhoToast(" +
-        json_string(message) + ", \"info\");}});</script>"
-}
-
 /* -------------------------------------------------------------------------- */
 /*  Numbers in thousandths                                                    */
 /* -------------------------------------------------------------------------- */

@@ -382,7 +382,7 @@ fn water_page_message(req: Request, tank: AquaTank, asked: string, message: stri
         escape_html(tank.name) + " · " + i18n_t(req, "water.lede") + "</p></div>" +
         aqua_tabs(req, "/water", "latest|water.tab.latest,history|water.tab.history,targets|water.tab.targets,log|water.tab.log,changes|water.tab.changes", tab, tank) +
         "<section class=\"rh-card wide\">" + content + "</section>"
-    return host_shell(req, i18n_t(req, "water.title"), body, aqua_toast(message))
+    return host_shell(req, i18n_t(req, "water.title"), body, appshell_toast(message))
 }
 
 fn water_test(req: Request) Response {

@@ -155,7 +155,7 @@ fn devices_page_message(req: Request, message: string) Response {
     }
     let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "devices.title") + "</h1><p>" + i18n_t(req, "devices.lede") + "</p></div>" +
         notice + tanks + "<div class=\"aq-roles\">" + cards + "</div>"
-    return host_shell(req, i18n_t(req, "devices.title"), body, aqua_toast(message))
+    return host_shell(req, i18n_t(req, "devices.title"), body, appshell_toast(message))
 }
 
 fn devices_save(req: Request) Response {
