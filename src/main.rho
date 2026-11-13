@@ -104,6 +104,8 @@ fn init() void {
     if aqua_tank(0).id == 0 {
         ignore_u32(aqua_add_tank("Aquarium", 0, "planted", "10:00", "20:00", ""))
     }
+    // Every tank's rules and chores, from the presets with its own names.
+    aqua_tanks_setup()
 }
 
 // background follows the live feed and refreshes the dashboard when a reading

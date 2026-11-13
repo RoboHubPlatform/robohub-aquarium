@@ -24,7 +24,7 @@ module aquarium
 // temperature when there is one, the newest test's otherwise; "" when none.
 fn aqua_latest(tank: AquaTank, parameter: string) string {
     if rho_str_eq(parameter, "temperature") {
-        let live: string = appapi_value("water_temperature")
+        let live: string = aqua_live_temperature(tank)
         if live != "" {
             return aqua_round(live, 1)
         }
@@ -263,7 +263,7 @@ fn equipment_switch(req: Request) Response {
 // aqua_temperature_chart is the last day of the heater's temperature, with the
 // tank's band behind it.
 fn aqua_temperature_chart(req: Request, tank: AquaTank) string {
-    let source: string = inventory_resolve("heater", "temperature")
+    let source: string = inventory_resolve(aqua_role_handle(tank, "heater"), "temperature")
     if source == "" {
         return "<p class=\"hint\">" + i18n_t(req, "overview.no_probe") + "</p>"
     }
@@ -401,7 +401,7 @@ fn aquarium_home(req: Request) Response {
     if mode != "" {
         status = i18n_t(req, "overview.mode") + " " + mode
     }
-    let light: string = inventory_read("light", "switch")
+    let light: string = inventory_read(aqua_role_handle(tank, "light"), "switch")
     if light != "" {
         if aqua_is_on(light) {
             status = status + " · " + i18n_t(req, "overview.lights_on_until") + " " + tank.lights_off

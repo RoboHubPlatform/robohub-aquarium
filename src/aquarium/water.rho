@@ -159,7 +159,7 @@ fn aqua_latest_rows(req: Request, tank: AquaTank) string {
             i = i + 1
         }
         if rho_str_eq(key, "temperature") {
-            let live: string = appapi_value("water_temperature")
+            let live: string = aqua_live_temperature(tank)
             if live != "" {
                 value = aqua_round(live, 1)
                 milli = aqua_number(live).milli
@@ -479,6 +479,6 @@ fn water_change(req: Request) Response {
     let litres: u32 = (tank.volume * percent) / 100
     journal_info("water_change", tank.handle, "person", rho_int_to_str(percent) + " % (" + rho_int_to_str(litres) + " L)")
     // The water change is the water-change chore done.
-    ignore_bool(scheduler_complete_title("Water change", rho_int_to_str(percent) + " %"))
+    ignore_bool(scheduler_complete_title(aqua_chore_title(tank, "Water change"), rho_int_to_str(percent) + " %"))
     return aqua_after_post("/water", tank, "changes", i18n_t(req, "water.change_logged"))
 }

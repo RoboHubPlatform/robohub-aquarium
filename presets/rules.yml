@@ -1,17 +1,23 @@
 # The aquarium's rules and modes (robohub/modules/rules). A rule names items by
 # their handles; until an item with that handle is bound, the rule reads nothing
 # and does nothing, and says so on the Rules page.
+#
+# These are the first tank's. Every other tank gets its own copy, named with its
+# handle (`reef-nano-keep-temperature`), its roles' handles (`reef-nano-heater`),
+# its band (`reef-nano.band.temperature.on`) and its light hours. A band's `on`
+# and `off` are a quarter of the tank's temperature target in from each end, and
+# its `alarm` two degrees past the top: the Water page's targets set them.
 rules:
   keep-temperature:
-    when: heater.temperature < 24.5
-    clear: heater.temperature > 25.5
+    when: heater.temperature < band.temperature.on
+    clear: heater.temperature > band.temperature.off
     do: switch heater on
     else: switch heater off
   too-warm:
-    when: heater.temperature > 28
+    when: heater.temperature > band.temperature.alarm
     for: 2m
     cooldown: 30m
-    do: switch heater off; alert error "the water is above 28 °C"
+    do: switch heater off; alert error "the water is two degrees above its band"
   lights:
     when: time between 10:00 and 20:00
     do: switch light on

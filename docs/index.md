@@ -41,6 +41,28 @@ Give an inventory item that handle and bind its capabilities on its Automation
 tab — the heater's switch to its plug and its temperature to a probe — and the
 rules act on it. Until then they read nothing, do nothing, and say so.
 
+The Devices page fills a tank's roles: which item plays each, and which mesh
+source each of its capabilities is.
+
+## Several tanks
+
+Each tank has its own roles, rules and chores. The first tank — the one made
+first — keeps the plain names: `heater`, `keep-temperature`, "Water change".
+Every other tank's carry its handle: `reef-nano-heater`,
+`reef-nano-keep-temperature`, "Water change · Reef nano". They are made from the
+presets when the tank is added, kept current at every start, and follow its
+light hours when they change. The Devices page shows the roles of the tank it
+is opened for (`/devices?tank=<id>`), and the overview and the Water page read
+the temperature from that tank's heater.
+
+The temperature rules compare with the tank's own band, from its targets on
+the Water page: `band.temperature.on` and `.off` are a quarter of the band in
+from each end — where the heater switches on and off — and `.alarm` is two
+degrees past the top. Another tank's are `<handle>.band.temperature.on` and so
+on. A rule may name any parameter's band this way (`band.no3.high`).
+
+The feeding and maintenance modes act on the first tank's equipment.
+
 ## Settings
 
 Settings → Gateway chooses where readings come from (Mesh or the simulator),

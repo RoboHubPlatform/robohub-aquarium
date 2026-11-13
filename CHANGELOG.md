@@ -164,3 +164,23 @@ A form that changed something sends the browser back to its page by GET: reloadi
 ## [0.5.4] - 2026-11-13
 
 Built on the shared modules' fixes: cron chores read as cron, rule durations with decimals and days, a mode ended once, the journal badge past 500, the newest history points, inventory totals in 64 bits and decimal commas, no blank notification.
+
+## [0.6.0] - 2026-11-13
+
+Several tanks, each with its own equipment, rules and chores.
+
+- Roles are a tank's: the first tank keeps `heater`, `light`, `filter-main`
+  and `co2`; another tank's are its handle's (`reef-nano-heater`). The Devices
+  page fills the roles of the tank it is opened for, and offers the others.
+- Each tank has its own copy of the preset rules, named and written with its
+  handles and its light hours, made when it is added and kept current at start.
+- The temperature rules compare with the tank's own band rather than fixed
+  numbers: the heater switches on a quarter of the band above its bottom and
+  off a quarter below its top (`band.temperature.on`, `.off`), and the alarm is
+  two degrees past the top (`.alarm`). For the planted band, 24.5–26 °C, that is
+  on below 24.875 and off above 25.625, where it was 24.5 and 25.5.
+- Each tank has its own water change, water test and filter rinse; a water
+  change logged for a tank completes that tank's.
+- The overview, the Water page and the temperature chart read the tank's own
+  probe, through its heater; the light status is the tank's light.
+- The feeding and maintenance modes still act on the first tank's equipment.

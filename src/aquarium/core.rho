@@ -476,6 +476,8 @@ fn aqua_presets_path(name: string) string {
 fn aqua_presets_refresh() void {
     ignore_bool(rho_write_text(aqua_db_path() + ".presets-targets.yml", rho_asset("aquarium", "presets/targets.yml")))
     ignore_bool(rho_write_text(aqua_db_path() + ".presets-roles.yml", rho_asset("aquarium", "presets/roles.yml")))
+    ignore_bool(rho_write_text(aqua_db_path() + ".presets-rules.yml", rho_asset("aquarium", "presets/rules.yml")))
+    ignore_bool(rho_write_text(aqua_db_path() + ".presets-schedule.yml", rho_asset("aquarium", "presets/schedule.yml")))
 }
 
 /// A target band, in thousandths; known is false when the tank has none.
@@ -574,9 +576,239 @@ fn aqua_publish(tank: AquaTank, parameter: string, milli: i64) void {
     }
 }
 
-// rules_host_value is the aquarium's own values a rule may name — its published
-// test results and derived values (`no3`, `days_since_water_change`) — asked
-// before an inventory item is read.
+/* -------------------------------------------------------------------------- */
+/*  Several tanks                                                             */
+/* -------------------------------------------------------------------------- */
+
+// Each tank has its own roles, rules and chores. The first tank — the one made
+// first — keeps the plain names an installation of one tank has always had
+// (`heater`, `keep-temperature`, `Water change`); every other tank's are its
+// handle's: `reef-nano-heater`, `reef-nano-keep-temperature`, `Water change ·
+// Reef nano`.
+
+fn aqua_first_tank_id() u32 {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return 0
+    }
+    let rows: AquariumTanks[32]
+    let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+    let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+    sql_close(opened.ok)
+    if listed.is_ok && listed.ok > 0 {
+        return u32(rows[0].id)
+    }
+    return 0
+}
+
+fn aqua_is_first(tank: AquaTank) bool {
+    return tank.id == 0 || tank.id == aqua_first_tank_id()
+}
+
+// aqua_prefix is what a tank's own names start with: "" for the first tank.
+fn aqua_prefix(tank: AquaTank) string {
+    if aqua_is_first(tank) {
+        return ""
+    }
+    return tank.handle + "-"
+}
+
+// aqua_role_handle is the inventory handle that plays a role in a tank.
+fn aqua_role_handle(tank: AquaTank, role: string) string {
+    return aqua_prefix(tank) + role
+}
+
+// aqua_chore_title is a chore's title for a tank.
+fn aqua_chore_title(tank: AquaTank, title: string) string {
+    if aqua_is_first(tank) {
+        return title
+    }
+    return title + " · " + tank.name
+}
+
+// aqua_live_temperature is a tank's probe now, through its heater's
+// temperature binding, or "".
+fn aqua_live_temperature(tank: AquaTank) string {
+    return inventory_read(aqua_role_handle(tank, "heater"), "temperature")
+}
+
+// aqua_word_swap replaces a role's name where it stands as a word — `heater` in
+// `switch heater on` and `heater.temperature`, not in `heaters` — by another.
+fn aqua_word_swap(text: string, word: string, replacement: string) string {
+    var out: string = ""
+    var rest: string = text
+    let n: u32 = u32(rho_strlen(word))
+    while rest != "" {
+        let at: i32 = rho_str_index_of(rest, word)
+        if at < 0 {
+            return out + rest
+        }
+        let i: u32 = u32(at)
+        var before_ok: bool = i == 0 && out == ""
+        if i > 0 {
+            let before: string = rho_str_slice(rest, i - 1, 1)
+            before_ok = rho_str_eq(before, " ") || rho_str_eq(before, "(") || rho_str_eq(before, ";")
+        } else if out != "" {
+            let last: string = rho_str_slice(out, u32(rho_strlen(out)) - 1, 1)
+            before_ok = rho_str_eq(last, " ") || rho_str_eq(last, "(") || rho_str_eq(last, ";")
+        }
+        var after_ok: bool = i + n >= u32(rho_strlen(rest))
+        if !after_ok {
+            let after: string = rho_str_slice(rest, i + n, 1)
+            after_ok = rho_str_eq(after, ".") || rho_str_eq(after, " ") || rho_str_eq(after, ")") || rho_str_eq(after, ";")
+        }
+        if before_ok && after_ok {
+            out = out + rho_str_slice(rest, 0, i) + replacement
+        } else {
+            out = out + rho_str_slice(rest, 0, i + n)
+        }
+        rest = rho_str_slice(rest, i + n, u32(rho_strlen(rest)) - i - n)
+    }
+    return out
+}
+
+// aqua_tank_names puts a tank's names into a rule's text: its roles' handles,
+// its band (`band.` names the first tank's, `<tank>.band.` another's) and its
+// light hours.
+fn aqua_tank_names(tank: AquaTank, text: string) string {
+    var out: string = text
+    if !aqua_is_first(tank) {
+        var roles: string = yaml.keys(aqua_presets_path("roles"), "roles")
+        while roles != "" {
+            let role: string = aqua_line(roles)
+            roles = aqua_after_line(roles)
+            if role != "" {
+                out = aqua_word_swap(out, role, aqua_role_handle(tank, role))
+            }
+        }
+        out = aqua_word_swap(out, "band", tank.handle + ".band")
+    }
+    if rho_str_starts_with(out, "time between ") && tank.lights_on != "" && tank.lights_off != "" {
+        out = "time between " + tank.lights_on + " and " + tank.lights_off
+    }
+    return out
+}
+
+// aqua_tank_setup gives a tank its rules and its chores, from the presets with
+// the tank's names in them. It is asked at start for every tank and when a tank
+// is added or changed; what the presets say stays what the rules say.
+fn aqua_tank_setup(tank: AquaTank) void {
+    if tank.id == 0 {
+        return
+    }
+    let path: string = aqua_presets_path("rules")
+    let prefix: string = aqua_prefix(tank)
+    var text: string = "rules:\n"
+    var rest: string = yaml.keys(path, "rules")
+    while rest != "" {
+        let name: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if name == "" {
+            continue
+        }
+        text = text + "  " + prefix + name + ":\n"
+        var fields: string = "when\nclear\nfor\ncooldown\ndo\nelse\n"
+        while fields != "" {
+            let key: string = aqua_line(fields)
+            fields = aqua_after_line(fields)
+            let value: string = aqua_trim(yaml.value(path, "rules." + name + "." + key))
+            if key != "" && value != "" {
+                text = text + "    " + key + ": " + aqua_tank_names(tank, value) + "\n"
+            }
+        }
+    }
+    ignore_u32(rules_presets(text))
+    if aqua_is_first(tank) {
+        return
+    }
+    // The chores a tank has of its own: the first tank's come from the presets.
+    let chores: string = aqua_presets_path("schedule")
+    var out: string = "chores:\n"
+    var keys: string = yaml.keys(chores, "chores")
+    while keys != "" {
+        let key: string = aqua_line(keys)
+        keys = aqua_after_line(keys)
+        if key == "" || rho_str_eq(key, "clean-glass") {
+            continue
+        }
+        out = out + "  " + prefix + key + ":\n"
+        var fields: string = "title\nkind\ninterval_hours\ngrace_hours\npriority\nusage_hours\nruntime_of\nconsumes\nconsumes_qty\n"
+        while fields != "" {
+            let field: string = aqua_line(fields)
+            fields = aqua_after_line(fields)
+            var value: string = aqua_trim(yaml.value(chores, "chores." + key + "." + field))
+            if field == "" || value == "" {
+                continue
+            }
+            if rho_str_eq(field, "title") {
+                value = aqua_chore_title(tank, value)
+            } else if rho_str_eq(field, "runtime_of") {
+                value = aqua_role_handle(tank, value)
+            }
+            out = out + "    " + field + ": " + value + "\n"
+        }
+    }
+    ignore_u32(scheduler_presets(out))
+}
+
+fn aqua_tanks_setup() void {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return
+    }
+    let rows: AquariumTanks[32]
+    let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+    let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+    sql_close(opened.ok)
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok {
+            aqua_tank_setup(aqua_tank_of(rows[i]))
+            i = i + 1
+        }
+    }
+}
+
+// aqua_band_value is a point of a tank's band a rule compares with: `low` and
+// `high` themselves; `on` and `off`, a quarter of the band in from each end,
+// where a heater switches on and off; `alarm`, two degrees past the top.
+fn aqua_band_value(tank: AquaTank, parameter: string, which: string) string {
+    let band: AquaBand = aqua_band(tank.id, parameter)
+    if !band.known {
+        return ""
+    }
+    let quarter: i64 = (band.high - band.low) / 4
+    if rho_str_eq(which, "low") { return aqua_decimal(band.low) }
+    if rho_str_eq(which, "high") { return aqua_decimal(band.high) }
+    if rho_str_eq(which, "on") { return aqua_decimal(band.low + quarter) }
+    if rho_str_eq(which, "off") { return aqua_decimal(band.high - quarter) }
+    if rho_str_eq(which, "alarm") { return aqua_decimal(band.high + 2000) }
+    return ""
+}
+
+// rules_host_value is the aquarium's own values a rule may name, asked before an
+// inventory item is read: a tank's band (`band.temperature.on` for the first
+// tank, `reef-nano.band.temperature.on` for another), and its published test
+// results and derived values (`no3`, `days_since_water_change`).
 fn rules_host_value(ref: string) string {
+    var tank: AquaTank = aqua_no_tank()
+    var rest: string = ""
+    if rho_str_starts_with(ref, "band.") {
+        tank = aqua_tank(aqua_first_tank_id())
+        rest = rho_str_slice(ref, 5, u32(rho_strlen(ref)) - 5)
+    } else {
+        let at: i32 = rho_str_index_of(ref, ".band.")
+        if at > 0 {
+            tank = aqua_tank_by_handle(rho_str_slice(ref, 0, u32(at)))
+            rest = rho_str_slice(ref, u32(at) + 6, u32(rho_strlen(ref)) - u32(at) - 6)
+        }
+    }
+    if tank.id > 0 && rest != "" {
+        let dot: i32 = rho_str_index_of(rest, ".")
+        if dot > 0 {
+            return aqua_band_value(tank, rho_str_slice(rest, 0, u32(dot)),
+                rho_str_slice(rest, u32(dot) + 1, u32(rho_strlen(rest)) - u32(dot) - 1))
+        }
+    }
     return appapi_value(ref)
 }

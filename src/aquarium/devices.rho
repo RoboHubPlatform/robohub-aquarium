@@ -37,6 +37,9 @@ fn devices_page(req: Request) Response {
 }
 
 fn devices_page_message(req: Request, message: string) Response {
+    // The roles of the tank the page is about: the first tank's are the plain
+    // handles, another's carry its handle (`reef-nano-heater`).
+    let tank: AquaTank = aqua_tank_param(req)
     let opened: Result[SqlDb, string] = aqua_open()
     if !opened.is_ok {
         return host_shell(req, i18n_t(req, "devices.title"), "<p>" + escape_html(opened.err) + "</p>", "")
@@ -65,8 +68,12 @@ fn devices_page_message(req: Request, message: string) Response {
         if role == "" {
             continue
         }
-        let label: string = aqua_role(role, "label")
-        let at: i32 = aqua_role_item(items, item_count, role)
+        let handle: string = aqua_role_handle(tank, role)
+        var label: string = aqua_role(role, "label")
+        if !aqua_is_first(tank) {
+            label = label + " · " + tank.name
+        }
+        let at: i32 = aqua_role_item(items, item_count, handle)
         var item_id: i64 = 0
         var item_choice: string = ""
         var state: string = "<span class=\"badge low\">" + i18n_t(req, "devices.unfilled") + "</span>"
@@ -91,7 +98,7 @@ fn devices_page_message(req: Request, message: string) Response {
                     mark = " selected"
                 }
                 var note: string = items[i].category
-                if items[i].handle != "" && !rho_str_eq(items[i].handle, role) {
+                if items[i].handle != "" && !rho_str_eq(items[i].handle, handle) {
                     note = note + " · " + i18n_t(req, "devices.now") + " " + items[i].handle
                 }
                 options = options + "<option value=\"" + id + "\"" + mark + ">" + escape_html(items[i].name + " (" + note + ")") + "</option>"
@@ -123,10 +130,11 @@ fn devices_page_message(req: Request, message: string) Response {
                 escape_html(name) + "\">" + inventory_source_options(capability, source, bindings, binding_count, item_id) +
                 "</select></td><td class=\"num\">" + escape_html(now) + "</td></tr>"
         }
-        cards = cards + "<section class=\"aq-card\"><h2>" + escape_html(label) + " <span><code>" + escape_html(role) + "</code> " + state +
+        cards = cards + "<section class=\"aq-card\"><h2>" + escape_html(label) + " <span><code>" + escape_html(handle) + "</code> " + state +
             "</span></h2><p class=\"hint\">" + escape_html(aqua_role(role, "hint")) + "</p>" +
             "<form method=\"post\" action=\"/devices\" class=\"aq-form\">" + forms_csrf_field() +
             "<input type=\"hidden\" name=\"role\" value=\"" + escape_html(role) + "\">" +
+            "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
             "<label>" + i18n_t(req, "devices.item") + "<select name=\"item\">" + options + "</select></label>" +
             "<table><thead><tr><th>" + i18n_t(req, "inventory.capability") + "</th><th>" + i18n_t(req, "inventory.gateway_source") +
             "</th><th>" + i18n_t(req, "inventory.now") + "</th></tr></thead><tbody>" + rows + "</tbody></table>" +
@@ -136,8 +144,17 @@ fn devices_page_message(req: Request, message: string) Response {
     if !inventory_automated() {
         notice = "<p class=\"notice\">" + i18n_t(req, "inventory.no_gateway") + "</p>"
     }
+    // With more than one tank, the page says whose roles these are and lets
+    // another tank's be chosen.
+    var tanks: string = ""
+    let choices: string = aqua_tank_choices()
+    if rho_str_index_of(choices, ",") >= 0 {
+        tanks = "<form method=\"get\" action=\"/devices\" class=\"aq-form inline-form\"><label>" + i18n_t(req, "devices.tank") +
+            "<select name=\"tank\" onchange=\"this.form.submit()\">" + aqua_option_list(choices, rho_int_to_str(tank.id), "") +
+            "</select></label></form>"
+    }
     let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "devices.title") + "</h1><p>" + i18n_t(req, "devices.lede") + "</p></div>" +
-        notice + "<div class=\"aq-roles\">" + cards + "</div>"
+        notice + tanks + "<div class=\"aq-roles\">" + cards + "</div>"
     return host_shell(req, i18n_t(req, "devices.title"), body, aqua_toast(message))
 }
 
@@ -147,22 +164,27 @@ fn devices_save(req: Request) Response {
         return devices_page_message(req, i18n_t(req, "form.expired"))
     }
     let role: string = aqua_form(body, "role")
-    let label: string = aqua_role(role, "label")
+    var label: string = aqua_role(role, "label")
     if label == "" {
         return devices_page_message(req, i18n_t(req, "devices.unknown"))
+    }
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    let handle: string = aqua_role_handle(tank, role)
+    if !aqua_is_first(tank) {
+        label = label + " · " + tank.name
     }
     var id: u32 = 0
     let chosen: string = aqua_form(body, "item")
     if rho_str_eq(chosen, "new") || chosen == "" {
-        let existing: u32 = inventory_item_id(role)
+        let existing: u32 = inventory_item_id(handle)
         if existing > 0 {
             id = existing
         } else {
-            id = inventory_add_equipment(label, aqua_role(role, "category"), role)
+            id = inventory_add_equipment(label, aqua_role(role, "category"), handle)
         }
     } else {
         id = rho_int_from_str(chosen)
-        if !inventory_assign_handle(id, role) {
+        if !inventory_assign_handle(id, handle) {
             return devices_page_message(req, i18n_t(req, "devices.no_item"))
         }
     }
@@ -181,9 +203,10 @@ fn devices_save(req: Request) Response {
             }
         }
     }
-    journal_info("device", role, "person", label + " mapped")
+    journal_info("device", handle, "person", label + " mapped")
+    let back: string = "/devices?tank=" + rho_int_to_str(tank.id) + "&msg="
     if problem != "" {
-        return redirect("/devices?msg=" + aqua_url_encode(problem))
+        return redirect(back + aqua_url_encode(problem))
     }
-    return redirect("/devices?msg=" + aqua_url_encode(label + ": " + i18n_t(req, "devices.saved")))
+    return redirect(back + aqua_url_encode(label + ": " + i18n_t(req, "devices.saved")))
 }

@@ -268,6 +268,42 @@ def main() -> int:
                 raise AssertionError(f"the role did not move to the other item: {handles}")
             assert_contains(get(base, "/devices"), ["connected"], "a mapped role")
 
+            # Several tanks: the second tank has rules, chores and roles of its
+            # own, named with its handle; the first keeps the plain names.
+            with sqlite3.connect(db) as conn:
+                reef = conn.execute("SELECT id, handle FROM aquarium_tanks WHERE name='Reef nano'").fetchone()
+                rules = dict(conn.execute("SELECT name, when_expr FROM rules").fetchall())
+                chores = {r[0] for r in conn.execute("SELECT title FROM chores")}
+            if rules.get(reef[1] + "-keep-temperature") != f"{reef[1]}-heater.temperature < {reef[1]}.band.temperature.on":
+                raise AssertionError(f"the second tank's rules: {rules}")
+            if rules.get("keep-temperature") != "heater.temperature < band.temperature.on":
+                raise AssertionError(f"the first tank's rule: {rules.get('keep-temperature')}")
+            if "Water change · Reef nano" not in chores or "Water change" not in chores:
+                raise AssertionError(f"the tanks' chores: {chores}")
+            assert_contains(get(base, f"/devices?tank={reef[0]}"), [f"{reef[1]}-heater", "Heater · Reef nano"], "the second tank's roles")
+            post(base, "/devices", {"role": "heater", "tank": str(reef[0]), "item": "new", "src_temperature": "sim-probe.temperature"})
+            with sqlite3.connect(db) as conn:
+                item = conn.execute("SELECT name FROM items WHERE handle=?", (reef[1] + "-heater",)).fetchone()
+            if not item or item[0] != "Heater · Reef nano":
+                raise AssertionError(f"the second tank's heater: {item}")
+            # A water change in the second tank completes its own chore.
+            post(base, "/water/change", {"tank": str(reef[0]), "percent": "20"})
+            with sqlite3.connect(db) as conn:
+                done = dict(conn.execute("SELECT title, last_completed_epoch FROM chores").fetchall())
+            if done.get("Water change · Reef nano", 0) == 0:
+                raise AssertionError(f"the second tank's water change did not complete its chore: {done}")
+            # A rule reads its tank's band: the band is a value, not a missing reading.
+            deadline = time.time() + 15
+            problem = "?"
+            while time.time() < deadline:
+                state = {r["name"]: r for r in json.loads(get(base, "/api/rules"))["rules"]}
+                problem = state.get("keep-temperature", {}).get("problem", "?")
+                if problem != "?" and "band" not in problem and state.get("keep-temperature", {}).get("state") in ("idle", "active"):
+                    break
+                time.sleep(1)
+            if "band" in problem:
+                raise AssertionError(f"the first tank's band is not read: {problem}")
+
             # Settings choose where readings come from.
             post(base, "/settings?tab=gateway", {"provider": "robohub-provider-mesh", "transport": "http"})
             conf = open(os.path.join(workspace, "bind.conf")).read()

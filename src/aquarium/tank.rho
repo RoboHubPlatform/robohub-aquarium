@@ -110,6 +110,8 @@ fn tank_save(req: Request) Response {
     if rho_str_eq(aqua_form(body, "primary"), "1") {
         settings_set("aquarium.tank", rho_int_to_str(tank.id))
     }
+    // Its rules follow its light hours and its kind's band.
+    aqua_tank_setup(aqua_tank(tank.id))
     journal_info("tank", tank.handle, "person", "tank saved")
     return aqua_after_post("/tank", tank, "", i18n_t(req, "tank.saved"))
 }
@@ -132,5 +134,7 @@ fn tank_add(req: Request) Response {
     if id == 0 {
         return tank_page_message(req, aqua_tank(0), i18n_t(req, "tank.taken"))
     }
+    // A tank of its own: its rules and its chores.
+    aqua_tank_setup(aqua_tank(id))
     return aqua_after_post("/tank", aqua_tank(id), "", i18n_t(req, "tank.added"))
 }
