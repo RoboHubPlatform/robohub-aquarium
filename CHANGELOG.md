@@ -200,3 +200,7 @@ Its own trimming, number reading and decimal and URL writing are gone: the toolc
 ## [0.6.4] - 2026-11-14
 
 The Devices page is the inventory's (inventory 0.3.0): the aquarium says which roles a tank has and which tank the page is about, and the page — the same one energy has — does the rest. A role is still filled by any equipment or a new item, and the second tank's roles still carry its handle.
+
+## [0.6.5] - 2026-11-14
+
+Reading an item's capability or a published value — what every rule does every few seconds — is a lookup, not a list of every item (inventory 0.3.1, appapi 0.1.4).

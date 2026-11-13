@@ -45,6 +45,26 @@
       ]
     },
     {
+      "name": "sql_get_appapi_value",
+      "sql": "SELECT value FROM appapi_values WHERE id = ?1",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "GetAppapiValueRow",
+      "fields": [
+        {
+          "name": "value",
+          "column": "value",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
       "name": "sql_put_appapi_value",
       "sql": "INSERT OR REPLACE INTO appapi_values (id, value, unit, label, kind, updated_at)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
       "parameters": [
@@ -391,6 +411,226 @@
       "name": "sql_list_items",
       "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes, i.kind, i.handle, i.runtime_s, i.runtime_at,\n       i.portion_milli, COALESCE(c.capabilities, '') AS capabilities,\n       COALESCE(c.uses, '') AS uses\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nORDER BY i.name",
       "result": "ListItemsRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category",
+          "column": "category",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "categoryId",
+          "column": "category_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantityMilli",
+          "column": "quantity_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "reorderMilli",
+          "column": "reorder_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "location",
+          "column": "location",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "column": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "column": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "runtimeS",
+          "column": "runtime_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "runtimeAt",
+          "column": "runtime_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "portionMilli",
+          "column": "portion_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capabilities",
+          "column": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "column": "uses",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_get_item_by_handle",
+      "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes, i.kind, i.handle, i.runtime_s, i.runtime_at,\n       i.portion_milli, COALESCE(c.capabilities, '') AS capabilities,\n       COALESCE(c.uses, '') AS uses\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nWHERE i.handle = ?1 AND i.handle \u003c\u003e ''\nLIMIT 1",
+      "parameters": [
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "GetItemByHandleRow",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "category",
+          "column": "category",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "categoryId",
+          "column": "category_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "quantityMilli",
+          "column": "quantity_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "reorderMilli",
+          "column": "reorder_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "location",
+          "column": "location",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "column": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "column": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "runtimeS",
+          "column": "runtime_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "runtimeAt",
+          "column": "runtime_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "portionMilli",
+          "column": "portion_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capabilities",
+          "column": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "column": "uses",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_get_item_by_id",
+      "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes, i.kind, i.handle, i.runtime_s, i.runtime_at,\n       i.portion_milli, COALESCE(c.capabilities, '') AS capabilities,\n       COALESCE(c.uses, '') AS uses\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nWHERE i.id = ?1\nLIMIT 1",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "GetItemByIdRow",
       "fields": [
         {
           "name": "id",
@@ -858,6 +1098,31 @@
         {
           "name": "name",
           "column": "name",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_get_binding",
+      "sql": "SELECT b.source FROM item_bindings b\nWHERE b.item_id = ?1 AND b.capability = ?2",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capability",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "GetBindingRow",
+      "fields": [
+        {
+          "name": "source",
+          "column": "source",
           "goType": "string",
           "text": true
         }

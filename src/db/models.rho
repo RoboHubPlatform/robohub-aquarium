@@ -28,6 +28,10 @@ struct AppapiValues {
     updatedAt: i64
 }
 
+struct GetAppapiValueRow {
+    value: string
+}
+
 // The newest 5000 points of the window, oldest first: a long window shows its
 // recent end rather than stopping where it began.
 struct ListAppapiPointsRow {
@@ -55,6 +59,44 @@ struct Categories {
 }
 
 struct ListItemsRow {
+    id: i64
+    name: string
+    category: string
+    categoryId: i64
+    unit: string
+    quantityMilli: i64
+    reorderMilli: i64
+    location: string
+    notes: string
+    kind: string
+    handle: string
+    runtimeS: i64
+    runtimeAt: i64
+    portionMilli: i64
+    capabilities: string
+    uses: string
+}
+
+struct GetItemByHandleRow {
+    id: i64
+    name: string
+    category: string
+    categoryId: i64
+    unit: string
+    quantityMilli: i64
+    reorderMilli: i64
+    location: string
+    notes: string
+    kind: string
+    handle: string
+    runtimeS: i64
+    runtimeAt: i64
+    portionMilli: i64
+    capabilities: string
+    uses: string
+}
+
+struct GetItemByIdRow {
     id: i64
     name: string
     category: string
@@ -106,6 +148,10 @@ struct ListBindingsRow {
     boundAt: string
     handle: string
     name: string
+}
+
+struct GetBindingRow {
+    source: string
 }
 
 // One thing that happened. at is Unix seconds. level is info, warning or error. kind is what sort of thing it was (switch, rule, mode, test, stock, system), subject what it was about (an item's handle, a rule's name), actor who or what did it (person:ana, rule:keep-temperature, device, system). An entry that needs attention stays open until resolved_at is set.

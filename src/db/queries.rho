@@ -18,6 +18,7 @@ import std.core.slice
 import std.sql
 
 extern fn sql_list_appapi_values(db: SqlDb, out: Slice[AppapiValues], capacity: u32) u32;
+extern fn sql_get_appapi_value(id: string, db: SqlDb, out: Slice[GetAppapiValueRow], capacity: u32) u32;
 extern fn sql_put_appapi_value(id: string, value: string, unit: string, label: string, kind: string, updated_at: string, db: SqlDb) u32;
 extern fn sql_add_appapi_point(id: string, at: string, value: string, db: SqlDb) u32;
 // The newest 5000 points of the window, oldest first: a long window shows its
@@ -32,6 +33,8 @@ extern fn sql_seed_category(name: string, kind: string, capabilities: string, us
 extern fn sql_update_category_preset(kind: string, capabilities: string, uses: string, name: string, db: SqlDb) u32;
 extern fn sql_insert_item(name: string, category_id: string, unit: string, quantity_milli: string, reorder_milli: string, location: string, notes: string, kind: string, handle: string, db: SqlDb) u32;
 extern fn sql_list_items(db: SqlDb, out: Slice[ListItemsRow], capacity: u32) u32;
+extern fn sql_get_item_by_handle(handle: string, db: SqlDb, out: Slice[GetItemByHandleRow], capacity: u32) u32;
+extern fn sql_get_item_by_id(id: i64, db: SqlDb, out: Slice[GetItemByIdRow], capacity: u32) u32;
 extern fn sql_update_item_details(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, kind: string, handle: string, portion_milli: i64, id: i64, db: SqlDb) u32;
 extern fn sql_set_item_runtime(runtime_s: i64, runtime_at: i64, id: i64, db: SqlDb) u32;
 extern fn sql_update_item_stock(delta: string, id: i64, db: SqlDb) u32;
@@ -42,6 +45,7 @@ extern fn sql_total_expenses(db: SqlDb, out: Slice[TotalExpensesRow], capacity: 
 extern fn sql_insert_movement(item_id: string, kind: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, occurred_at: string, comment: string, db: SqlDb) u32;
 extern fn sql_low_stock_items(db: SqlDb, out: Slice[LowStockItemsRow], capacity: u32) u32;
 extern fn sql_list_bindings(db: SqlDb, out: Slice[ListBindingsRow], capacity: u32) u32;
+extern fn sql_get_binding(item_id: i64, capability: string, db: SqlDb, out: Slice[GetBindingRow], capacity: u32) u32;
 extern fn sql_bind_capability(item_id: string, capability: string, source: string, access: string, db: SqlDb) u32;
 extern fn sql_unbind_capability(item_id: i64, capability: string, db: SqlDb) u32;
 extern fn sql_set_item_handle(handle: string, id: i64, db: SqlDb) u32;
@@ -110,6 +114,18 @@ fn ListAppapiValues(db: SqlDb, out: Slice[AppapiValues], capacity: u32) Result[u
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_appapi_values(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn GetAppapiValue(id: string, db: SqlDb, out: Slice[GetAppapiValueRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_appapi_value(id, db, out, capacity)
     let failure: string = sql_failed(db)
     if failure != "" {
         return Err[u32, SqlError](SqlError{ failure, -1 })
@@ -242,6 +258,36 @@ fn ListItems(db: SqlDb, out: Slice[ListItemsRow], capacity: u32) Result[u32, Sql
     return Ok[u32, SqlError](wrote)
 }
 
+// Note: the type of category is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of capabilities is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of uses is not one it names, which is not one this knows; it is carried as text.
+fn GetItemByHandle(handle: string, db: SqlDb, out: Slice[GetItemByHandleRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_item_by_handle(handle, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+// Note: the type of category is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of capabilities is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of uses is not one it names, which is not one this knows; it is carried as text.
+fn GetItemById(id: i64, db: SqlDb, out: Slice[GetItemByIdRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_item_by_id(id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
 fn UpdateItemDetails(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, kind: string, handle: string, portion_milli: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_update_item_details(name, category_id, unit, reorder_milli, location, notes, kind, handle, portion_milli, id, db)
     let failure: string = sql_failed(db)
@@ -338,6 +384,18 @@ fn ListBindings(db: SqlDb, out: Slice[ListBindingsRow], capacity: u32) Result[u3
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_bindings(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn GetBinding(item_id: i64, capability: string, db: SqlDb, out: Slice[GetBindingRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_binding(item_id, capability, db, out, capacity)
     let failure: string = sql_failed(db)
     if failure != "" {
         return Err[u32, SqlError](SqlError{ failure, -1 })
