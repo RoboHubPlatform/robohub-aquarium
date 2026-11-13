@@ -183,7 +183,7 @@ fn devices_save(req: Request) Response {
     }
     journal_info("device", role, "person", label + " mapped")
     if problem != "" {
-        return devices_page_message(req, problem)
+        return redirect("/devices?msg=" + aqua_url_encode(problem))
     }
-    return devices_page_message(req, label + ": " + i18n_t(req, "devices.saved"))
+    return redirect("/devices?msg=" + aqua_url_encode(label + ": " + i18n_t(req, "devices.saved")))
 }

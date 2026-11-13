@@ -392,6 +392,17 @@ fn water_test(req: Request) Response {
         return water_page_message(req, tank, "log", i18n_t(req, "form.expired"))
     }
     let note: string = aqua_form(body, "note")
+    // Every value is read before any is kept: a form with one mistake keeps
+    // nothing, so sending it again corrected does not log the rest twice.
+    var check: string = AQUA_PARAMETERS
+    while check != "" {
+        let key: string = aqua_field(aqua_line(check), 0)
+        check = aqua_after_line(check)
+        let text: string = aqua_form(body, "v_" + key)
+        if key != "" && text != "" && !aqua_number(text).ok {
+            return water_page_message(req, tank, "log", aqua_parameter_label(key) + ": " + text + " " + i18n_t(req, "water.not_number"))
+        }
+    }
     var kept: u32 = 0
     var problem: string = ""
     var rest: string = AQUA_PARAMETERS
@@ -401,9 +412,7 @@ fn water_test(req: Request) Response {
         let text: string = aqua_form(body, "v_" + key)
         if key != "" && text != "" {
             let value: AquaNumber = aqua_number(text)
-            if !value.ok {
-                problem = aqua_parameter_label(key) + ": " + text + " is not a number"
-            } else {
+            if value.ok {
                 let failed: string = aqua_record_test(tank, key, value.milli, aqua_form(body, "k_" + key), "manual",
                     note, "person")
                 if failed != "" {
@@ -415,12 +424,14 @@ fn water_test(req: Request) Response {
         }
     }
     if problem != "" {
-        return water_page_message(req, tank, "log", problem)
+        // Some were kept: the page is reloaded by GET all the same, so a refresh
+        // does not keep them again.
+        return aqua_after_post("/water", tank, "log", rho_int_to_str(kept) + " " + i18n_t(req, "water.logged") + "; " + problem)
     }
     if kept == 0 {
         return water_page_message(req, tank, "log", i18n_t(req, "water.nothing"))
     }
-    return water_page_message(req, tank, "latest", rho_int_to_str(kept) + " " + i18n_t(req, "water.logged"))
+    return aqua_after_post("/water", tank, "latest", rho_int_to_str(kept) + " " + i18n_t(req, "water.logged"))
 }
 
 fn water_targets(req: Request) Response {
@@ -445,7 +456,7 @@ fn water_targets(req: Request) Response {
     }
     sql_close(opened.ok)
     journal_info("tank", tank.handle, "person", "targets changed")
-    return water_page_message(req, tank, "targets", i18n_t(req, "water.targets_saved"))
+    return aqua_after_post("/water", tank, "targets", i18n_t(req, "water.targets_saved"))
 }
 
 fn water_change(req: Request) Response {
@@ -469,5 +480,5 @@ fn water_change(req: Request) Response {
     journal_info("water_change", tank.handle, "person", rho_int_to_str(percent) + " % (" + rho_int_to_str(litres) + " L)")
     // The water change is the water-change chore done.
     ignore_bool(scheduler_complete_title("Water change", rho_int_to_str(percent) + " %"))
-    return water_page_message(req, tank, "changes", i18n_t(req, "water.change_logged"))
+    return aqua_after_post("/water", tank, "changes", i18n_t(req, "water.change_logged"))
 }

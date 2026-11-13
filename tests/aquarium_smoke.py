@@ -189,6 +189,23 @@ def main() -> int:
                 left = conn.execute("SELECT quantity_milli FROM items WHERE handle='no3-kit'").fetchone()[0]
             if left != 9000:
                 raise AssertionError(f"the kit was not used up: {left}")
+            # The form sends the browser back by GET: reloading that page logs
+            # nothing again and uses up no second kit.
+            status, location = post_raw(base, "/water/test", {"tank": str(tank[0]), "v_no3": "28", "k_no3": "no3-kit"})
+            if status not in (302, 303) or not location.startswith("/water?tank="):
+                raise AssertionError(f"a water test answered {status} {location!r}")
+            get(base, location)
+            get(base, location)
+            with sqlite3.connect(db) as conn:
+                again = conn.execute("SELECT quantity_milli FROM items WHERE handle='no3-kit'").fetchone()[0]
+            if again != 8000:
+                raise AssertionError(f"reloading the page after a test used up a kit: {again}")
+            # A form with one value that is not a number keeps none of them.
+            assert_contains(post(base, "/water/test", {"tank": str(tank[0]), "v_no3": "12", "v_ph": "seven"}),
+                            ["nothing was logged"], "a test with a mistake")
+            with sqlite3.connect(db) as conn:
+                if conn.execute("SELECT quantity_milli FROM items WHERE handle='no3-kit'").fetchone()[0] != 8000:
+                    raise AssertionError("a test with a mistake kept the other values")
             values = {v["id"]: v["value"] for v in json.loads(get(base, "/api/v1/values"))["values"]}
             if values.get("no3") != "28" or values.get(tank[1] + ".ph") != "6.9":
                 raise AssertionError(f"the results are not offered: {values}")

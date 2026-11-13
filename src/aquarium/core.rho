@@ -102,6 +102,41 @@ fn aqua_after_line(rest: string) string {
     return rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
 }
 
+// aqua_url_encode writes text so it can be one value of a query string: every
+// byte but a letter, a digit and -._~ as %XX.
+fn aqua_url_encode(text: string) string {
+    let plain: string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~"
+    let hex: string = "0123456789ABCDEF"
+    var out: string = ""
+    var i: u32 = 0
+    while i < u32(rho_strlen(text)) {
+        let ch: string = rho_str_slice(text, i, 1)
+        if rho_str_index_of(plain, ch) >= 0 {
+            out = out + ch
+        } else {
+            var code: u32 = 0
+            while code < 256 && !rho_str_eq(rho_str_from_byte(u8(code)), ch) {
+                code = code + 1
+            }
+            out = out + "%" + rho_str_slice(hex, code / 16, 1) + rho_str_slice(hex, code % 16, 1)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// aqua_after_post is where a form that changed something sends the browser: the
+// page again, by GET, with what happened as its message. A refresh then reloads
+// the page rather than logging the test, using up the kit or completing the chore
+// a second time.
+fn aqua_after_post(path: string, tank: AquaTank, tab: string, message: string) Response {
+    var target: string = path + "?tank=" + rho_int_to_str(tank.id)
+    if tab != "" {
+        target = target + "&tab=" + tab
+    }
+    return redirect(target + "&msg=" + aqua_url_encode(message))
+}
+
 // aqua_toast is the script that shows a message once the page has loaded.
 fn aqua_toast(message: string) string {
     if message == "" {

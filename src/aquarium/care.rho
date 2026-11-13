@@ -92,7 +92,7 @@ fn dosing_add(req: Request) Response {
     if !stocked {
         return dosing_page_message(req, tank, i18n_t(req, "dosing.no_stock"))
     }
-    return dosing_page_message(req, tank, i18n_t(req, "dosing.logged"))
+    return aqua_after_post("/dosing", tank, "", i18n_t(req, "dosing.logged"))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -199,7 +199,7 @@ fn livestock_add(req: Request) Response {
         rho_int_to_str(aqua_now()), aqua_form(body, "notes"), opened.ok))
     sql_close(opened.ok)
     journal_info("livestock", tank.handle, "person", rho_int_to_str(count) + " × " + species + " added")
-    return livestock_page_message(req, tank, i18n_t(req, "livestock.added_ok"))
+    return aqua_after_post("/livestock", tank, "", i18n_t(req, "livestock.added_ok"))
 }
 
 fn livestock_loss(req: Request) Response {
@@ -218,5 +218,5 @@ fn livestock_loss(req: Request) Response {
     if done.is_ok && done.ok > 0 {
         journal_warning("livestock", tank.handle, "person", "a loss was recorded")
     }
-    return livestock_page_message(req, tank, i18n_t(req, "livestock.loss_recorded"))
+    return aqua_after_post("/livestock", tank, "", i18n_t(req, "livestock.loss_recorded"))
 }

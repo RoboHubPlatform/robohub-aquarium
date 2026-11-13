@@ -156,3 +156,7 @@ once, and its widgets' Mesh URLs move to stable ids.
 ## [0.5.2] - 2026-11-13
 
 The clock is read from the process (`rho_now_s`, rho 0.6.0) instead of from `date` written to a file and read back, which a request and the background loop could truncate under each other: entries dated 1970 and modes that expired at once. Built on the shared modules' fixes of the same kind and provider-mesh 0.5.1, which no longer hands one source's reading to another.
+
+## [0.5.3] - 2026-11-13
+
+A form that changed something sends the browser back to its page by GET: reloading the page after logging a test, a dose, a water change, livestock, a tank or a device mapping no longer does it again — a second kit used up, the water-change chore completed twice. A water test with one value that is not a number keeps none of them, so sending it again corrected logs nothing twice.
