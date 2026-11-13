@@ -148,3 +148,7 @@ with the shared modules' pages in the same shell; dark and light. The old
 equipment, automation, chemistry, modes and events pages lead to their new
 places. An installation of 0.4 keeps its records: its events move to the journal
 once, and its widgets' Mesh URLs move to stable ids.
+
+## [0.5.1] - 2026-11-13
+
+`same_origin` refuses a form posted from another origin: keeper and the other applications are other ports of the same host, which a SameSite cookie does not tell apart. Built on widgets 0.3.1, inventory 0.2.1, i18n 0.4.1, rules 0.1.1 and notifications 0.1.4. The smoke test tries each of the holes those close.

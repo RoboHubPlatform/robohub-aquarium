@@ -64,6 +64,27 @@ def post(base: str, path: str, fields: dict) -> str:
         return response.read().decode("utf-8", "replace")
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def post_raw(base: str, path: str, fields: dict, headers: dict = None):
+    """A POST that follows no redirect: the status and the Location it answered."""
+    fields = dict(fields, csrf=CSRF)
+    request = urllib.request.Request(base + path, data=urllib.parse.urlencode(fields).encode(), method="POST")
+    request.add_header("Content-Type", "application/x-www-form-urlencoded")
+    request.add_header("Authorization", f"Bearer {TOKEN}")
+    for name, value in (headers or {}).items():
+        request.add_header(name, value)
+    opener = urllib.request.build_opener(_NoRedirect)
+    try:
+        with opener.open(request, timeout=20) as response:
+            return response.status, response.headers.get("Location", "")
+    except urllib.error.HTTPError as error:
+        return error.code, error.headers.get("Location", "")
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -237,6 +258,33 @@ def main() -> int:
                 raise AssertionError(f"the gateway was not switched: {conf}")
             post(base, "/settings?tab=gateway", {"provider": "simulator", "transport": "auto"})
             assert_contains(get(base, "/"), ["Simulator"], "back on the simulator")
+
+            # The holes of the 2026-11 review stay closed.
+            # A message in the URL is text in the toast, never script.
+            evil = "</script><script>alert(1)</script>"
+            if "<script>alert(1)" in get(base, "/expenses?msg=" + urllib.parse.quote(evil)):
+                raise AssertionError("the inventory toast runs a message as script")
+            # The language switch returns to a path on this origin only.
+            for wanted_next in ("/\\evil.example", "/ok\r\nX-Evil: 1", "//evil.example", "https://evil.example"):
+                status, location = post_raw(base, "/i18n/locale", {"locale": "ro", "next": wanted_next})
+                if location != "/":
+                    raise AssertionError(f"the language switch returned to {location!r} for {wanted_next!r}")
+            post_raw(base, "/i18n/locale", {"locale": "en", "next": "/"})
+            # A widget's URL is one argument of curl, never options of its own.
+            marker = os.path.join(workspace, "widget-injected")
+            post(base, "/widgets/add", {"title": "Injected", "kind": "numeric", "source_kind": "url",
+                                        "source": f'http://127.0.0.1:9/x" -o "{marker}'})
+            post_raw(base, "/widgets/refresh", {})
+            time.sleep(4)
+            if os.path.exists(marker):
+                raise AssertionError("a widget URL passed an option to curl")
+            # A form posted from another origin is refused before any handler.
+            status, _ = post_raw(base, "/tank/add", {"name": "Cross"}, {"Origin": "http://evil.example"})
+            if status != 403:
+                raise AssertionError(f"a cross-origin form was answered {status}")
+            status, _ = post_raw(base, "/tank/add", {"name": "Cross"}, {"Sec-Fetch-Site": "same-site"})
+            if status != 403:
+                raise AssertionError(f"a same-site form from another port was answered {status}")
 
             # 0.4's pages lead to where their work is now.
             for old, new in (("/chemistry", "Water &amp; chemistry"), ("/automation", "Rules &amp; modes"), ("/events", "Journal")):
