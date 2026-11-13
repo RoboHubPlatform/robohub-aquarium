@@ -1,3 +1,15 @@
+//
+// @file storage.rho
+// @brief The application's own files, embedded at build time, and the host functions it and its modules call.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-02
+//
+// SPDX-License-Identifier: MIT
+//
+
 module aquarium
 
 // The application's own files, embedded at build time.
