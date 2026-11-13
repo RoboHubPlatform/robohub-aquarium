@@ -196,3 +196,7 @@ The settings page, the docs page and the shell's top bar are the shared appshell
 ## [0.6.3] - 2026-11-14
 
 Its own trimming, number reading and decimal and URL writing are gone: the toolchain's `str_trim`, `milli_*` and `str_url_encode` (rho 0.7.0) do it, the same way every RoboHub module now does. A number is still read with a dot or a comma. Needs rho 0.7.0.
+
+## [0.6.4] - 2026-11-14
+
+The Devices page is the inventory's (inventory 0.3.0): the aquarium says which roles a tank has and which tank the page is about, and the page — the same one energy has — does the rest. A role is still filled by any equipment or a new item, and the second tank's roles still carry its handle.

@@ -11,7 +11,7 @@ module:
   previous_ids:
     - robohub.applications.aquarium
   type: rho
-  version: 0.6.3
+  version: 0.6.4
   kind: keeper-hosted
   title: Aquarium
   description: >
@@ -97,7 +97,7 @@ deps:
     forms: ">=0.1.0"
     notifications: ">=0.1.0"
     logging: ">=0.1.0"
-    inventory: ">=0.2.0"
+    inventory: ">=0.3.0"
     scheduler: ">=0.2.0"
     widgets: ">=0.2.6"
     journal: ">=0.1.0"

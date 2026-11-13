@@ -244,7 +244,7 @@ def main() -> int:
             # sources the gateway (here the simulator) lists.
             page = get(base, "/devices")
             assert_contains(page, ["Heater", "Main filter", "not mapped", "sim-heater-plug.switch", "sim-probe.temperature"], "the devices page")
-            assert_contains(post(base, "/devices", {"role": "heater", "item": "new", "src_switch": "sim-heater-plug.switch",
+            assert_contains(post(base, "/devices", {"role": "heater", "section": "roles", "pick": "new", "src_switch": "sim-heater-plug.switch",
                                                     "src_temperature": "sim-probe.temperature", "src_power": "sim-heater-plug.power"}),
                             ["Heater: mapped"], "the heater mapped to a new item")
             with sqlite3.connect(db) as conn:
@@ -258,10 +258,10 @@ def main() -> int:
             with sqlite3.connect(db) as conn:
                 bar = conn.execute("SELECT id FROM items WHERE name='LED bar'").fetchone()[0]
                 spare = conn.execute("SELECT id FROM items WHERE name='Spare LED'").fetchone()[0]
-            post(base, "/devices", {"role": "light", "item": str(bar), "src_switch": "sim-light-relay.switch"})
-            taken = post(base, "/devices", {"role": "filter-main", "item": "new", "src_switch": "sim-light-relay.switch"})
+            post(base, "/devices", {"role": "light", "section": "roles", "pick": str(bar), "src_switch": "sim-light-relay.switch"})
+            taken = post(base, "/devices", {"role": "filter-main", "section": "roles", "pick": "new", "src_switch": "sim-light-relay.switch"})
             assert_contains(taken, ["already controlled by LED bar"], "one relay for two roles")
-            post(base, "/devices", {"role": "light", "item": str(spare), "src_switch": ""})
+            post(base, "/devices", {"role": "light", "section": "roles", "pick": str(spare), "src_switch": ""})
             with sqlite3.connect(db) as conn:
                 handles = dict(conn.execute("SELECT name, handle FROM items WHERE name IN ('LED bar', 'Spare LED')").fetchall())
             if handles != {"LED bar": "", "Spare LED": "light"}:
@@ -281,7 +281,7 @@ def main() -> int:
             if "Water change · Reef nano" not in chores or "Water change" not in chores:
                 raise AssertionError(f"the tanks' chores: {chores}")
             assert_contains(get(base, f"/devices?tank={reef[0]}"), [f"{reef[1]}-heater", "Heater · Reef nano"], "the second tank's roles")
-            post(base, "/devices", {"role": "heater", "tank": str(reef[0]), "item": "new", "src_temperature": "sim-probe.temperature"})
+            post(base, f"/devices?tank={reef[0]}", {"role": f"{reef[1]}-heater", "section": "roles", "pick": "new", "src_temperature": "sim-probe.temperature"})
             with sqlite3.connect(db) as conn:
                 item = conn.execute("SELECT name FROM items WHERE handle=?", (reef[1] + "-heater",)).fetchone()
             if not item or item[0] != "Heater · Reef nano":

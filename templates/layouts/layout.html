@@ -30,9 +30,9 @@
   .reading .s { font-size: .72rem; color: var(--teal); }
   .reading .s.w { color: var(--warn); }
   .aq-cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; }
-  .aq-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: .9rem 1rem; display: grid; gap: .5rem; align-content: start; min-width: 0; }
-  .aq-card h2 { font-size: 1.02rem; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
-  .aq-card h2 a { font: 600 .74rem var(--sans); }
+  .aq-card, .app-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: .9rem 1rem; display: grid; gap: .5rem; align-content: start; min-width: 0; }
+  .aq-card h2, .app-card h2 { font-size: 1.02rem; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+  .aq-card h2 a, .app-card h2 a { font: 600 .74rem var(--sans); }
   .row { display: grid; grid-template-columns: 1fr auto auto; gap: .6rem; align-items: center; padding: .45rem 0; border-top: 1px solid var(--line); }
   .row:first-of-type { border-top: 0; }
   .row .t { font-weight: 600; }
@@ -54,14 +54,14 @@
   .ev .warning { color: var(--warn); } .ev .error { color: var(--stop); }
   td.aq-in { color: var(--teal); } td.aq-out { color: var(--warn); font-weight: 600; }
   td.num, .num { text-align: right; white-space: nowrap; }
-  .aq-form { display: grid; gap: .6rem; }
-  .aq-form.inline-form { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); align-items: end; margin-bottom: 1rem; }
-  .aq-form.grid-form { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: end; }
-  .aq-form label { display: grid; gap: .2rem; font-size: .76rem; color: var(--faint); }
-  .aq-form label.check { display: flex; align-items: center; gap: .4rem; }
+  .aq-form, .app-form { display: grid; gap: .6rem; }
+  .aq-form.inline-form, .app-form.inline-form { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); align-items: end; margin-bottom: 1rem; }
+  .aq-form.grid-form, .app-form.grid-form { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: end; }
+  .aq-form label, .app-form label { display: grid; gap: .2rem; font-size: .76rem; color: var(--faint); }
+  .aq-form label.check, .app-form label.check { display: flex; align-items: center; gap: .4rem; }
   tr.sel td { background: var(--gold-soft); }
-  .aq-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; }
-  .aq-roles h2 span { display: inline-flex; gap: .4rem; align-items: center; }
+  .aq-roles, .app-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; }
+  .aq-roles h2 span, .app-cards h2 span { display: inline-flex; gap: .4rem; align-items: center; }
   pre.docs { white-space: pre-wrap; font-size: .84rem; }
   @media (max-width: 860px) {
     .aq-cols { grid-template-columns: 1fr; }
