@@ -25,20 +25,8 @@ const AQUA_ROWS: u32 = 500
 fn aqua_ignore(value: Result[u32, SqlError]) void {
 }
 
-fn aqua_trim(text: string) string {
-    var out: string = text
-    while rho_strlen(out) > 0 && (rho_str_eq(rho_str_slice(out, 0, 1), " ") || rho_str_eq(rho_str_slice(out, 0, 1), "\n")) {
-        out = rho_str_slice(out, 1, u32(rho_strlen(out)) - 1)
-    }
-    while rho_strlen(out) > 0 && (rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), " ") ||
-        rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), "\n")) {
-        out = rho_str_slice(out, 0, u32(rho_strlen(out)) - 1)
-    }
-    return out
-}
-
 fn aqua_form(body: string, name: string) string {
-    return aqua_trim(form_value(body, name))
+    return str_trim(form_field(body, name))
 }
 
 fn aqua_db_path() string {
@@ -102,29 +90,6 @@ fn aqua_after_line(rest: string) string {
     return rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
 }
 
-// aqua_url_encode writes text so it can be one value of a query string: every
-// byte but a letter, a digit and -._~ as %XX.
-fn aqua_url_encode(text: string) string {
-    let plain: string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~"
-    let hex: string = "0123456789ABCDEF"
-    var out: string = ""
-    var i: u32 = 0
-    while i < u32(rho_strlen(text)) {
-        let ch: string = rho_str_slice(text, i, 1)
-        if rho_str_index_of(plain, ch) >= 0 {
-            out = out + ch
-        } else {
-            var code: u32 = 0
-            while code < 256 && !rho_str_eq(rho_str_from_byte(u8(code)), ch) {
-                code = code + 1
-            }
-            out = out + "%" + rho_str_slice(hex, code / 16, 1) + rho_str_slice(hex, code % 16, 1)
-        }
-        i = i + 1
-    }
-    return out
-}
-
 // aqua_after_post is where a form that changed something sends the browser: the
 // page again, by GET, with what happened as its message. A refresh then reloads
 // the page rather than logging the test, using up the kit or completing the chore
@@ -134,7 +99,7 @@ fn aqua_after_post(path: string, tank: AquaTank, tab: string, message: string) R
     if tab != "" {
         target = target + "&tab=" + tab
     }
-    return redirect(target + "&msg=" + aqua_url_encode(message))
+    return redirect(target + "&msg=" + str_url_encode(message))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -148,46 +113,7 @@ struct AquaNumber {
 
 // aqua_number reads a decimal written with a dot or a comma, in thousandths.
 fn aqua_number(text: string) AquaNumber {
-    var value: string = aqua_trim(text)
-    var negative: bool = false
-    if rho_strlen(value) > 0 && rho_str_eq(rho_str_slice(value, 0, 1), "-") {
-        negative = true
-        value = rho_str_slice(value, 1, u32(rho_strlen(value)) - 1)
-    }
-    if value == "" {
-        return AquaNumber{ false, 0 }
-    }
-    var whole: i64 = 0
-    var fraction: i64 = 0
-    var digits: u32 = 0
-    var dot: bool = false
-    var i: u32 = 0
-    while i < u32(rho_strlen(value)) {
-        let ch: string = rho_str_slice(value, i, 1)
-        let digit: i32 = rho_str_index_of("0123456789", ch)
-        if (rho_str_eq(ch, ".") || rho_str_eq(ch, ",")) && !dot {
-            dot = true
-        } else if digit < 0 {
-            return AquaNumber{ false, 0 }
-        } else if dot {
-            if digits < 3 {
-                fraction = fraction * 10 + i64(digit)
-                digits = digits + 1
-            }
-        } else {
-            whole = whole * 10 + i64(digit)
-        }
-        i = i + 1
-    }
-    while digits < 3 {
-        fraction = fraction * 10
-        digits = digits + 1
-    }
-    var milli: i64 = whole * 1000 + fraction
-    if negative {
-        milli = 0 - milli
-    }
-    return AquaNumber{ true, milli }
+    return AquaNumber{ milli_valid(text), milli_parse(text) }
 }
 
 fn aqua_i64(value: i64) string {
@@ -206,30 +132,6 @@ fn aqua_i64(value: i64) string {
         rest = rest / 10
     }
     return sign + out
-}
-
-// aqua_decimal writes thousandths as a decimal with no trailing zeros.
-fn aqua_decimal(milli: i64) string {
-    var value: i64 = milli
-    var sign: string = ""
-    if value < 0 {
-        sign = "-"
-        value = 0 - value
-    }
-    let whole: i64 = value / 1000
-    let fraction: i64 = value - whole * 1000
-    var out: string = sign + aqua_i64(whole)
-    if fraction > 0 {
-        var digits: string = aqua_i64(fraction)
-        while rho_strlen(digits) < 3 {
-            digits = "0" + digits
-        }
-        while rho_str_eq(rho_str_slice(digits, u32(rho_strlen(digits)) - 1, 1), "0") {
-            digits = rho_str_slice(digits, 0, u32(rho_strlen(digits)) - 1)
-        }
-        out = out + "." + digits
-    }
-    return out
 }
 
 // aqua_round writes a reading to so many decimals, rounding half away from zero:
@@ -251,7 +153,7 @@ fn aqua_round(text: string, places: u32) string {
         half = 0 - half
     }
     milli = ((milli + half) / unit_milli) * unit_milli
-    return aqua_decimal(milli)
+    return milli_format(milli)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -381,7 +283,7 @@ fn aqua_tank_param(req: Request) AquaTank {
 
 // aqua_type_label is a kind of tank as people say it.
 fn aqua_type_label(kind: string) string {
-    let label: string = aqua_trim(yaml.value(aqua_presets_path("targets"), "types." + kind + ".label"))
+    let label: string = str_trim(yaml.value(aqua_presets_path("targets"), "types." + kind + ".label"))
     if label == "" {
         return kind
     }
@@ -491,7 +393,7 @@ fn aqua_seed_targets(tank_id: u32, kind: string, replace: bool) void {
     while rest != "" {
         let key: string = aqua_field(aqua_line(rest), 0)
         rest = aqua_after_line(rest)
-        let band: string = aqua_trim(yaml.value(path, "types." + kind + "." + key))
+        let band: string = str_trim(yaml.value(path, "types." + kind + "." + key))
         let dash: i32 = rho_str_index_of(band, "-")
         if key != "" && dash > 0 {
             let low: AquaNumber = aqua_number(rho_str_slice(band, 0, u32(dash)))
@@ -533,7 +435,7 @@ fn aqua_band_text(band: AquaBand) string {
     if !band.known {
         return "—"
     }
-    return aqua_decimal(band.low) + "–" + aqua_decimal(band.high)
+    return milli_format(band.low) + "–" + milli_format(band.high)
 }
 
 // aqua_in_band is "in", "low" or "high" for a value against a band, "" with none.
@@ -560,10 +462,10 @@ fn aqua_in_band(band: AquaBand, milli: i64) string {
 fn aqua_publish(tank: AquaTank, parameter: string, milli: i64) void {
     let label: string = aqua_parameter_label(parameter)
     let unit: string = aqua_parameter_unit(parameter)
-    ignore_bool(appapi_publish(tank.handle + "." + parameter, aqua_decimal(milli), unit, tank.name + " · " + label))
+    ignore_bool(appapi_publish(tank.handle + "." + parameter, milli_format(milli), unit, tank.name + " · " + label))
     let first: AquaTank = aqua_tank(0)
     if first.id == tank.id {
-        ignore_bool(appapi_publish(parameter, aqua_decimal(milli), unit, label))
+        ignore_bool(appapi_publish(parameter, milli_format(milli), unit, label))
     }
 }
 
@@ -702,7 +604,7 @@ fn aqua_tank_setup(tank: AquaTank) void {
         while fields != "" {
             let key: string = aqua_line(fields)
             fields = aqua_after_line(fields)
-            let value: string = aqua_trim(yaml.value(path, "rules." + name + "." + key))
+            let value: string = str_trim(yaml.value(path, "rules." + name + "." + key))
             if key != "" && value != "" {
                 text = text + "    " + key + ": " + aqua_tank_names(tank, value) + "\n"
             }
@@ -727,7 +629,7 @@ fn aqua_tank_setup(tank: AquaTank) void {
         while fields != "" {
             let field: string = aqua_line(fields)
             fields = aqua_after_line(fields)
-            var value: string = aqua_trim(yaml.value(chores, "chores." + key + "." + field))
+            var value: string = str_trim(yaml.value(chores, "chores." + key + "." + field))
             if field == "" || value == "" {
                 continue
             }
@@ -769,11 +671,11 @@ fn aqua_band_value(tank: AquaTank, parameter: string, which: string) string {
         return ""
     }
     let quarter: i64 = (band.high - band.low) / 4
-    if rho_str_eq(which, "low") { return aqua_decimal(band.low) }
-    if rho_str_eq(which, "high") { return aqua_decimal(band.high) }
-    if rho_str_eq(which, "on") { return aqua_decimal(band.low + quarter) }
-    if rho_str_eq(which, "off") { return aqua_decimal(band.high - quarter) }
-    if rho_str_eq(which, "alarm") { return aqua_decimal(band.high + 2000) }
+    if rho_str_eq(which, "low") { return milli_format(band.low) }
+    if rho_str_eq(which, "high") { return milli_format(band.high) }
+    if rho_str_eq(which, "on") { return milli_format(band.low + quarter) }
+    if rho_str_eq(which, "off") { return milli_format(band.high - quarter) }
+    if rho_str_eq(which, "alarm") { return milli_format(band.high + 2000) }
     return ""
 }
 

@@ -39,7 +39,7 @@ fn aqua_latest(tank: AquaTank, parameter: string) string {
     var i: u32 = 0
     while i < count {
         if rho_str_eq(tests[i].parameter, parameter) {
-            return aqua_decimal(tests[i].valueMilli)
+            return milli_format(tests[i].valueMilli)
         }
         i = i + 1
     }
@@ -58,10 +58,10 @@ fn aqua_reading(req: Request, tank: AquaTank, parameter: string) string {
         if rho_str_eq(where, "in") {
             state = i18n_t(req, "overview.in_band") + " " + aqua_band_text(band)
         } else if rho_str_eq(where, "high") {
-            state = i18n_t(req, "overview.above") + " " + aqua_decimal(band.high)
+            state = i18n_t(req, "overview.above") + " " + milli_format(band.high)
             tone = " w"
         } else if rho_str_eq(where, "low") {
-            state = i18n_t(req, "overview.below") + " " + aqua_decimal(band.low)
+            state = i18n_t(req, "overview.below") + " " + milli_format(band.low)
             tone = " w"
         } else {
             state = ""
@@ -425,7 +425,7 @@ fn aquarium_home(req: Request) Response {
     }
     var power: string = "—"
     if equipment.power > 0 {
-        power = aqua_round(aqua_decimal(equipment.power), 1)
+        power = aqua_round(milli_format(equipment.power), 1)
     }
     let body: string = template_fill(template_get("overview"),
         i18n_vars(req) +

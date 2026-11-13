@@ -24,7 +24,7 @@ fn aqua_roles_path() string {
 }
 
 fn aqua_role(key: string, field: string) string {
-    return aqua_trim(yaml.value(aqua_roles_path(), "roles." + key + "." + field))
+    return str_trim(yaml.value(aqua_roles_path(), "roles." + key + "." + field))
 }
 
 // aqua_role_item is the item that plays a role: the one with its handle.
@@ -206,7 +206,7 @@ fn devices_save(req: Request) Response {
     journal_info("device", handle, "person", label + " mapped")
     let back: string = "/devices?tank=" + rho_int_to_str(tank.id) + "&msg="
     if problem != "" {
-        return redirect(back + aqua_url_encode(problem))
+        return redirect(back + str_url_encode(problem))
     }
-    return redirect(back + aqua_url_encode(label + ": " + i18n_t(req, "devices.saved")))
+    return redirect(back + str_url_encode(label + ": " + i18n_t(req, "devices.saved")))
 }

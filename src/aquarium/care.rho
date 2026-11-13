@@ -41,7 +41,7 @@ fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
                     product = doses[i].product
                 }
                 rows = rows + "<tr><td><time>" + escape_html(journal_time(doses[i].at, offset)) + "</time></td><td>" +
-                    escape_html(product) + "</td><td class=\"num\">" + escape_html(aqua_decimal(doses[i].amountMilli) + " " + doses[i].unit) +
+                    escape_html(product) + "</td><td class=\"num\">" + escape_html(milli_format(doses[i].amountMilli) + " " + doses[i].unit) +
                     "</td><td>" + escape_html(doses[i].note) + "</td></tr>\n"
                 i = i + 1
             }
@@ -88,7 +88,7 @@ fn dosing_add(req: Request) Response {
     aqua_ignore(InsertDose(rho_int_to_str(tank.id), product, aqua_i64(amount.milli), unit, rho_int_to_str(aqua_now()), note, opened.ok))
     sql_close(opened.ok)
     let stocked: bool = inventory_consume(product, u32(amount.milli), "dose", "dose:" + tank.handle)
-    journal_info("dose", tank.handle, "person", aqua_decimal(amount.milli) + " " + unit + " " + aqua_field(named, 0))
+    journal_info("dose", tank.handle, "person", milli_format(amount.milli) + " " + unit + " " + aqua_field(named, 0))
     if !stocked {
         return dosing_page_message(req, tank, i18n_t(req, "dosing.no_stock"))
     }

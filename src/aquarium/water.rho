@@ -47,11 +47,11 @@ fn aqua_record_test(tank: AquaTank, parameter: string, milli: i64, kit: string, 
     let unit: string = aqua_parameter_unit(parameter)
     let band: AquaBand = aqua_band(tank.id, parameter)
     let where: string = aqua_in_band(band, milli)
-    let reading: string = label + " " + aqua_decimal(milli) + " " + unit
+    let reading: string = label + " " + milli_format(milli) + " " + unit
     if rho_str_eq(where, "high") {
-        journal_warning("test", tank.handle, actor, reading + ", above the " + aqua_decimal(band.high) + " target")
+        journal_warning("test", tank.handle, actor, reading + ", above the " + milli_format(band.high) + " target")
     } else if rho_str_eq(where, "low") {
-        journal_warning("test", tank.handle, actor, reading + ", below the " + aqua_decimal(band.low) + " target")
+        journal_warning("test", tank.handle, actor, reading + ", below the " + milli_format(band.low) + " target")
     } else {
         journal_info("test", tank.handle, actor, reading)
     }
@@ -94,7 +94,7 @@ fn aqua_spark(tests: AquariumTests[500], test_count: u32, parameter: string, ton
             if count == 0 || v > high {
                 high = v
             }
-            values = aqua_decimal(v) + "\n" + values
+            values = milli_format(v) + "\n" + values
             count = count + 1
         }
         i = i + 1
@@ -149,7 +149,7 @@ fn aqua_latest_rows(req: Request, tank: AquaTank) string {
         while i < test_count && value == "" {
             if rho_str_eq(tests[i].parameter, key) {
                 milli = tests[i].valueMilli
-                value = aqua_decimal(milli)
+                value = milli_format(milli)
                 taken = journal_time(tests[i].at, offset)
                 source = tests[i].kit
                 if source == "" {
@@ -206,7 +206,7 @@ fn aqua_history_rows(req: Request, tank: AquaTank) string {
         }
         out = out + "<tr><td><time>" + escape_html(journal_time(row.at, offset)) + "</time></td><td>" +
             escape_html(aqua_parameter_label(row.parameter)) + "</td><td" + css + ">" +
-            escape_html(aqua_decimal(row.valueMilli) + " " + aqua_parameter_unit(row.parameter)) + "</td><td>" +
+            escape_html(milli_format(row.valueMilli) + " " + aqua_parameter_unit(row.parameter)) + "</td><td>" +
             escape_html(row.kit) + "</td><td>" + escape_html(row.note) + "</td></tr>\n"
         i = i + 1
     }
@@ -282,8 +282,8 @@ fn aqua_targets_form(req: Request, tank: AquaTank) string {
         var low: string = ""
         var high: string = ""
         if band.known {
-            low = aqua_decimal(band.low)
-            high = aqua_decimal(band.high)
+            low = milli_format(band.low)
+            high = milli_format(band.high)
         }
         rows = rows + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td><input name=\"lo_" + key +
             "\" value=\"" + escape_html(low) + "\" inputmode=\"decimal\"></td><td><input name=\"hi_" + key +
