@@ -152,3 +152,7 @@ once, and its widgets' Mesh URLs move to stable ids.
 ## [0.5.1] - 2026-11-13
 
 `same_origin` refuses a form posted from another origin: keeper and the other applications are other ports of the same host, which a SameSite cookie does not tell apart. Built on widgets 0.3.1, inventory 0.2.1, i18n 0.4.1, rules 0.1.1 and notifications 0.1.4. The smoke test tries each of the holes those close.
+
+## [0.5.2] - 2026-11-13
+
+The clock is read from the process (`rho_now_s`, rho 0.6.0) instead of from `date` written to a file and read back, which a request and the background loop could truncate under each other: entries dated 1970 and modes that expired at once. Built on the shared modules' fixes of the same kind and provider-mesh 0.5.1, which no longer hands one source's reading to another.
