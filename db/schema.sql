@@ -1,133 +1,82 @@
--- The categories an item or a purchase can belong to.
-CREATE TABLE IF NOT EXISTS categories (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name    TEXT NOT NULL UNIQUE
+-- The aquarium's own tables. Everything a shared module keeps — the inventory
+-- and its equipment, the schedule, the rules, the journal, the dashboard, the
+-- values the aquarium offers — is that module's, generated in by rho-sql (0.2).
+
+-- A tank. type is planted, community, reef or pond: what its targets are
+-- seeded from. lights_on and lights_off are HH:MM, what the light rules use.
+CREATE TABLE IF NOT EXISTS aquarium_tanks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    handle      TEXT NOT NULL UNIQUE,
+    volume_l    INTEGER NOT NULL DEFAULT 0,
+    type        TEXT NOT NULL DEFAULT 'planted',
+    lights_on   TEXT NOT NULL DEFAULT '10:00',
+    lights_off  TEXT NOT NULL DEFAULT '20:00',
+    notes       TEXT NOT NULL DEFAULT '',
+    created_at  INTEGER NOT NULL DEFAULT 0
 );
 
--- What is on hand, how much of it, and when to reorder.
-CREATE TABLE IF NOT EXISTS items (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    name             TEXT NOT NULL,
-    category_id      INTEGER REFERENCES categories(id),
-    unit             TEXT NOT NULL DEFAULT 'unit',
-    quantity_milli   INTEGER NOT NULL DEFAULT 0,
-    reorder_milli    INTEGER NOT NULL DEFAULT 0,
-    location         TEXT,
-    notes            TEXT,
-    created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+-- A parameter's target band for a tank, in thousandths: temperature 24.5–26 is
+-- 24500–26000.
+CREATE TABLE IF NOT EXISTS aquarium_targets (
+    tank_id     INTEGER NOT NULL,
+    parameter   TEXT NOT NULL,
+    low_milli   INTEGER NOT NULL,
+    high_milli  INTEGER NOT NULL,
+    PRIMARY KEY (tank_id, parameter)
 );
 
--- One purchase line. Money is integer cents and quantity is thousandths, so a
--- total never depends on the floating-point spelling of 12.34.
-CREATE TABLE IF NOT EXISTS expenses (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id           INTEGER REFERENCES items(id),
-    item              TEXT NOT NULL,
-    category_id       INTEGER REFERENCES categories(id),
-    quantity_milli    INTEGER NOT NULL DEFAULT 1000,
-    unit_price_cents  INTEGER NOT NULL DEFAULT 0,
-    total_cents       INTEGER NOT NULL DEFAULT 0,
-    source            TEXT,
-    purchased_at      TEXT NOT NULL,
-    comment           TEXT,
-    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+-- One water test: a parameter's value in thousandths, at a time, with the kit
+-- (an inventory consumable, by handle) that was used up, or by a sensor.
+CREATE TABLE IF NOT EXISTS aquarium_tests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    tank_id      INTEGER NOT NULL,
+    parameter    TEXT NOT NULL,
+    value_milli  INTEGER NOT NULL,
+    at           INTEGER NOT NULL,
+    kit          TEXT NOT NULL DEFAULT '',
+    source       TEXT NOT NULL DEFAULT 'manual',
+    note         TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS expenses_purchased_at ON expenses(purchased_at);
+CREATE INDEX IF NOT EXISTS aquarium_tests_tank_at ON aquarium_tests(tank_id, at);
 
--- Every change to the stock, so the quantity can be read as a history rather
--- than only as a current number. quantity_milli is signed: negative is stock
--- leaving the shelf.
-CREATE TABLE IF NOT EXISTS stock_movements (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id          INTEGER NOT NULL REFERENCES items(id),
-    kind             TEXT NOT NULL,
-    quantity_milli   INTEGER NOT NULL,
-    unit_price_cents INTEGER NOT NULL DEFAULT 0,
-    total_cents      INTEGER NOT NULL DEFAULT 0,
-    source           TEXT,
-    occurred_at      TEXT NOT NULL,
-    comment          TEXT,
-    created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+-- One dose: a product (an inventory consumable, by handle) and how much of it,
+-- in the product's unit and thousandths.
+CREATE TABLE IF NOT EXISTS aquarium_doses (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    tank_id       INTEGER NOT NULL,
+    product       TEXT NOT NULL,
+    amount_milli  INTEGER NOT NULL,
+    unit          TEXT NOT NULL DEFAULT '',
+    at            INTEGER NOT NULL,
+    note          TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS stock_movements_item ON stock_movements(item_id);
--- A chore definition and its next due time. next_due_epoch is Unix seconds;
--- zero means the schedule has no wall-clock due time (a usage chore).
-CREATE TABLE IF NOT EXISTS chores (
-    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-    title                  TEXT NOT NULL,
-    description            TEXT,
-    schedule_kind          TEXT NOT NULL,
-    schedule_value         TEXT,
-    interval_hours         INTEGER NOT NULL DEFAULT 0,
-    usage_interval_hours   INTEGER NOT NULL DEFAULT 0,
-    usage_accum_seconds    INTEGER NOT NULL DEFAULT 0,
-    grace_hours            INTEGER NOT NULL DEFAULT 0,
-    priority               TEXT NOT NULL DEFAULT 'normal',
-    enabled                INTEGER NOT NULL DEFAULT 1,
-    next_due_epoch         INTEGER NOT NULL DEFAULT 0,
-    snoozed_until_epoch    INTEGER NOT NULL DEFAULT 0,
-    last_completed_epoch   INTEGER NOT NULL DEFAULT 0,
-    created_at             TEXT NOT NULL DEFAULT (datetime('now'))
+-- One water change: the share of the tank's volume, in percent.
+CREATE TABLE IF NOT EXISTS aquarium_water_changes (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    tank_id  INTEGER NOT NULL,
+    percent  INTEGER NOT NULL,
+    at       INTEGER NOT NULL,
+    note     TEXT NOT NULL DEFAULT ''
 );
 
--- One completion of a chore, with the note a person left.
-CREATE TABLE IF NOT EXISTS chore_completions (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    chore_id          INTEGER NOT NULL REFERENCES chores(id),
-    completed_epoch   INTEGER NOT NULL,
-    note              TEXT,
-    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+-- What lives in a tank: fish, invertebrates, corals and plants, how many, since
+-- when, and how many were lost.
+CREATE TABLE IF NOT EXISTS aquarium_livestock (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    tank_id   INTEGER NOT NULL,
+    kind      TEXT NOT NULL DEFAULT 'fish',
+    species   TEXT NOT NULL,
+    count     INTEGER NOT NULL DEFAULT 1,
+    lost      INTEGER NOT NULL DEFAULT 0,
+    added_at  INTEGER NOT NULL DEFAULT 0,
+    notes     TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS chore_completions_chore ON chore_completions(chore_id);
-
--- Equipment the application can call, read or simulate. Without a board a
--- device is still a row with a state and the last value it reported.
-CREATE TABLE IF NOT EXISTS devices (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    name            TEXT NOT NULL,
-    kind            TEXT NOT NULL,
-    state           TEXT NOT NULL DEFAULT 'unknown',
-    last_value      TEXT,
-    updated_epoch   INTEGER NOT NULL DEFAULT 0
-);
-
--- A rule is a metric, an operator and an action. The engine evaluates it when a
--- value is fed in; the hardware binding can be added without changing the rule.
-CREATE TABLE IF NOT EXISTS automation_rules (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    name            TEXT NOT NULL,
-    kind            TEXT NOT NULL,
-    metric          TEXT NOT NULL,
-    operator        TEXT NOT NULL,
-    threshold       TEXT NOT NULL DEFAULT '0',
-    action          TEXT NOT NULL,
-    enabled         INTEGER NOT NULL DEFAULT 1,
-    state           TEXT NOT NULL DEFAULT 'normal',
-    last_value      TEXT NOT NULL DEFAULT '0',
-    updated_epoch   INTEGER NOT NULL DEFAULT 0
-);
-
--- Manual water tests, the chemistry log.
-CREATE TABLE IF NOT EXISTS water_tests (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    parameter       TEXT NOT NULL,
-    value           TEXT NOT NULL,
-    unit            TEXT NOT NULL DEFAULT '',
-    tested_at       TEXT NOT NULL,
-    note            TEXT
-);
-
--- Operational modes with an expiry: water change, feeding, and so on.
-CREATE TABLE IF NOT EXISTS aquarium_modes (
-    name                TEXT PRIMARY KEY,
-    active_until_epoch  INTEGER NOT NULL DEFAULT 0,
-    note                TEXT
-);
-
--- Append-only audit trail. A state change, a manual override, a trip.
+-- The events the aquarium kept before the journal module (0.4 and earlier). It
+-- is read once, into the journal, and otherwise left as it was.
 CREATE TABLE IF NOT EXISTS system_events (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     severity        TEXT NOT NULL DEFAULT 'INFO',
@@ -135,33 +84,3 @@ CREATE TABLE IF NOT EXISTS system_events (
     message         TEXT NOT NULL,
     created_epoch   INTEGER NOT NULL DEFAULT 0
 );
-
-CREATE INDEX IF NOT EXISTS system_events_created ON system_events(created_epoch);
-
--- A dashboard widget. numeric shows the last value; chart shows the last
--- `points` values as a sparkline. source_kind is manual or url.
-CREATE TABLE IF NOT EXISTS widgets (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    title            TEXT NOT NULL,
-    kind             TEXT NOT NULL DEFAULT 'numeric',
-    source_kind      TEXT NOT NULL DEFAULT 'manual',
-    source           TEXT,
-    method           TEXT NOT NULL DEFAULT 'GET',
-    unit             TEXT,
-    points           INTEGER NOT NULL DEFAULT 24,
-    position         INTEGER NOT NULL DEFAULT 0,
-    size             TEXT NOT NULL DEFAULT 'small',
-    decimals         INTEGER NOT NULL DEFAULT 2,
-    pinned           INTEGER NOT NULL DEFAULT 0,
-    created_epoch    INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS widget_values (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    widget_id        INTEGER NOT NULL REFERENCES widgets(id),
-    value_text       TEXT NOT NULL,
-    value_milli      INTEGER NOT NULL DEFAULT 0,
-    recorded_epoch   INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE INDEX IF NOT EXISTS widget_values_widget ON widget_values(widget_id);

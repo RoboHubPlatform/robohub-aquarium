@@ -1,0 +1,23 @@
+# CI for this repository: the RoboHub workflow every repository in the
+# ecosystem calls, so the steps are written once (robohub/.github/workflows).
+#
+# The aquarium builds beside robohub, which carries the shared modules it
+# declares under `deps: robohub:` (inventory, scheduler, widgets, forms,
+# notifications …), the gateway interface and the Mesh provider it binds.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: RoboHubPlatform/robohub/.github/workflows/robohub-ci.yml@main
+    secrets: inherit
+    with:
+      siblings: robohub
+      components: rho-auth rho-log rho-sql
+      build: .

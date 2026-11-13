@@ -1,0 +1,26 @@
+# The aquarium's recurring care (robohub/modules/scheduler). A chore is added
+# once, by its title; after that it is the person's to change.
+chores:
+  water-change:
+    title: Water change
+    kind: interval
+    interval_hours: 168
+    grace_hours: 24
+    priority: high
+  test-water:
+    title: Test the water
+    kind: interval
+    interval_hours: 168
+    grace_hours: 24
+  rinse-filter:
+    title: Rinse filter media
+    kind: usage
+    usage_hours: 720
+    runtime_of: filter-main
+    consumes: filter-pads
+    consumes_qty: 1
+  clean-glass:
+    title: Clean the glass
+    kind: interval
+    interval_hours: 336
+    priority: low

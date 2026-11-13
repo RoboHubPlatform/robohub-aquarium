@@ -1,0 +1,26 @@
+# What the aquarium offers other applications and clients (robohub/modules/appapi):
+# GET /api/v1/values. The aquarium publishes each tank's latest test results
+# itself (no3, ph …); these are derived from readings and the journal.
+values:
+  water_temperature:
+    from: heater.temperature
+    fn: export
+    unit: °C
+    label: Water temperature
+  temperature_avg_24h:
+    from: heater.temperature
+    fn: avg
+    window: 24h
+    unit: °C
+    label: Water temperature, 24 h average
+  days_since_water_change:
+    from: water_change
+    fn: since
+    unit: d
+    label: Days since the last water change
+  heater_energy_week:
+    from: heater.power
+    fn: integral
+    window: 7d
+    unit: Wh
+    label: Heater energy, last 7 days

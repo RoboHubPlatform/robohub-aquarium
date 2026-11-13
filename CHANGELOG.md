@@ -107,3 +107,44 @@ The smoke test signs in with a keeper ticket, as the keeper issues them.
 ## [0.4.0] - 2026-11-12
 
 Aquarium reaches Mesh through the gateway interface, binding the Mesh provider with Mesh's address and the project in `module.yml`. The Settings page writes those into the binding's settings for the installation; the `mesh-gateway` plugin entry, the contract include and `gateway.conf` are gone.
+
+## [0.4.1] - 2026-11-13
+
+The aquarium has a repository of its own, `robohub-aquarium`, beside the
+orchestrator, with its history. It declares the RoboHub platform, and binds the
+bus as well as the gateway: with `transport: auto` the Mesh provider (0.4.0)
+follows the feed Mesh relays on the keeper's broker (`mesh/<project>/telemetry`,
+which its broker user may read) and falls back to Mesh's HTTP stream when there
+is no broker.
+
+Its own `db/schema.sql` and `db/queries.sql` now hold the aquarium's tables only.
+The copies of the inventory, scheduler and widgets tables and statements are
+gone: those modules declare their own (inventory 0.2.0, scheduler 0.1.5, widgets
+0.2.6) and rho-sql 0.2 generates them in.
+
+## [0.5.0] - 2026-11-13
+
+The aquarium is rebuilt on the shared RoboHub modules, in the RoboHub shell.
+
+What is an aquarium's is its own: tanks (volume, kind, light hours), each with
+target bands per parameter seeded from its kind (presets/targets.yml); water
+tests logged a row per parameter with the kit each used up, compared with the
+bands (out of band is a journal warning) and offered as values a rule can read
+(`no3`); water changes, which complete the water-change chore; doses, which take
+the product off the inventory; livestock and plants, with losses.
+
+What any application needs is a shared module, seeded from the aquarium's
+presets: equipment is inventory items bound to gateway sources (inventory 0.2),
+automation is rules and modes (feeding, maintenance), events are the journal,
+recurring care is the scheduler, the dashboard is widgets 0.3, and
+`/api/v1/values` and `/api/v1/events` are appapi. Readings come from Mesh or the
+simulator, chosen in Settings, with Mesh's transport and project; the aquarium no
+longer registers with Mesh itself or keeps a shared-secret callback.
+
+The pages: an overview (the tank, its readings against their bands, equipment
+with its switches, the last day's temperature, what is due, the journal),
+equipment, water and chemistry, dosing, livestock and plants, tanks and settings,
+with the shared modules' pages in the same shell; dark and light. The old
+equipment, automation, chemistry, modes and events pages lead to their new
+places. An installation of 0.4 keeps its records: its events move to the journal
+once, and its widgets' Mesh URLs move to stable ids.

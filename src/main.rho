@@ -1,174 +1,145 @@
+//
+// @file main.rho
+// @brief The aquarium: its modules, its routes, what it does at start and in the background.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
 module aquarium
 
-// The aquarium host. It owns the router and the port; the inventory module
-// included here adds its own routes under /expenses.
+// One service on one port. What is an aquarium's — tanks and their targets,
+// water tests and changes, doses, livestock — is here, in src/aquarium. What any
+// RoboHub application needs is a shared module included below: the inventory
+// (equipment and its automation), the scheduler, the rules, the journal, the
+// dashboard, the API the aquarium offers, the look. Devices are reached only
+// through the gateway interface, from Mesh or the simulator.
+
 include "settings"
 include "i18n"
+include "ui"
 include "storage.rho"
 include "db/models.rho"
 include "db/queries.rho"
 include "inventory"
 include "scheduler"
 include "widgets"
+include "journal"
+include "rules"
+include "appapi"
 include "logging"
 include "htmx"
-include "aquarium.rho"
+include "aquarium/core.rho"
+include "aquarium/shell.rho"
+include "aquarium/overview.rho"
+include "aquarium/water.rho"
+include "aquarium/care.rho"
+include "aquarium/tank.rho"
+include "aquarium/devices.rho"
+include "aquarium/settings.rho"
+include "aquarium/migrate.rho"
 
 import std.sql
 import std.web.http
 import std.web.template
 import rho.log
 import robohub.gateway
+import robohub.simulator
 
-route GET "/" => aquarium_home
-route GET "/docs" => aquarium_docs
-route GET "/equipment" => equipment_page
-route POST "/equipment/add" => equipment_add
-route POST "/equipment/state" => equipment_state
-route POST "/equipment/value" => equipment_value
-route GET "/automation" => automation_page
-route POST "/automation/add" => automation_add
-route POST "/automation/simulate" => automation_simulate
-route GET "/chemistry" => chemistry_page
-route POST "/chemistry/add" => chemistry_add
-route GET "/modes" => modes_page
-route POST "/modes/start" => modes_start
-route POST "/modes/stop" => modes_stop
-route GET "/events" => events_page
-route GET "/settings" => aqua_settings_page
-route POST "/settings" => aqua_settings_save
+route GET  "/"                   => aquarium_home
+route GET  "/docs"               => aquarium_docs
+route GET  "/equipment"          => equipment_page
+route POST "/equipment/switch"   => equipment_switch
+route GET  "/water"              => water_page
+route POST "/water/test"         => water_test
+route POST "/water/targets"      => water_targets
+route POST "/water/change"       => water_change
+route GET  "/dosing"             => dosing_page
+route POST "/dosing"             => dosing_add
+route GET  "/livestock"          => livestock_page
+route POST "/livestock"          => livestock_add
+route POST "/livestock/loss"     => livestock_loss
+route GET  "/devices"            => devices_page
+route POST "/devices"            => devices_save
+route GET  "/tank"               => tank_page
+route POST "/tank"               => tank_save
+route POST "/tank/add"           => tank_add
+route GET  "/settings"           => aqua_settings_page
+route POST "/settings"           => aqua_settings_save
+// The pages of 0.4, where their work is now.
+route GET  "/chemistry"          => old_chemistry
+route GET  "/automation"         => old_automation
+route GET  "/modes"              => old_automation
+route GET  "/events"             => old_events
 
-fn aquarium_keeper_link() string {
-    return aqua_keeper_link()
+fn old_chemistry(req: Request) Response {
+    return redirect("/water")
 }
 
-fn aquarium_docs(req: Request) Response {
-    var content: string = rho_asset("aquarium", "docs/index.md")
-    if content == "" {
-        content = "No documentation found."
-    }
-    let body: string = "<h1>Documentation</h1><pre class=\"docs\">" + escape_html(content) + "</pre>"
-    let document: string = template_fill(template_get("layout"),
-        vars("title", "Documentation") + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) +
-        vars("keeper", aquarium_keeper_link()) +
-        vars("notifications", notification_embed()) +
-        vars("forms_style", forms_style()) +
-        vars("widgets_style", widgets_style()))
-    return html(status_ok(), document)
+fn old_automation(req: Request) Response {
+    return redirect("/rules")
 }
 
-fn aqua_port() string {
-    var addr: string = getenv("RHO_HTTP_ADDR")
-    if addr == "" {
-        return "8480"
-    }
-    var last: i32 = -1
-    var i: u32 = 0
-    while i < u32(rho_strlen(addr)) {
-        if rho_str_eq(rho_str_slice(addr, i, 1), ":") {
-            last = i32(i)
-        }
-        i = i + 1
-    }
-    if last >= 0 {
-        return rho_str_slice(addr, u32(last) + 1,
-            u32(rho_strlen(addr)) - u32(last) - 1)
-    }
-    return addr
+fn old_events(req: Request) Response {
+    return redirect("/journal")
 }
 
-fn aqua_base_url() string {
-    return "http://127.0.0.1:" + aqua_port()
-}
-
-fn aquarium_instance_id() string {
-    let id: string = settings_get("aquarium.instance_id", "")
-    if id == "" {
-        return "aquarium-" + aqua_port()
-    }
-    return id
-}
-
-fn aquarium_mesh_register() void {
-    let response: string = gateway.register_client("robohub-aquarium",
-        aquarium_instance_id(), aqua_base_url() + "/api/aquarium/mesh/events",
-        "energy.fault,energy.mode")
-    let client_id: string = aqua_json_string_field(response, "client_id")
-    let secret: string = aqua_json_string_field(response, "secret")
-    if client_id != "" {
-        settings_set("aquarium.mesh_client_id", client_id)
-        settings_set("aquarium.mesh_secret", secret)
-        info("aquarium.mesh", "registered as " + client_id)
-    } else {
-        warn("aquarium.mesh", "registration did not return a client id")
-    }
-}
-
-fn aquarium_heartbeat() void {
-    let client_id: string = settings_get("aquarium.mesh_client_id", "")
-    if client_id != "" {
-        ignore_string(gateway.client_heartbeat(client_id))
-    }
-}
-
-fn aquarium_mesh_event(req: Request) Response {
-    let secret: string = settings_get("aquarium.mesh_secret", "")
-    let auth: string = header_str(req, "Authorization")
-    if secret == "" || !rho_str_eq(auth, "Bearer " + secret) {
-        return json(401, "{\"ok\":false,\"error\":\"unauthorized\"}")
-    }
-    let body: string = request_body(req)
-    let topic: string = aqua_json_string_field(body, "topic")
-    let payload: string = aqua_json_string_field(body, "payload")
-    if topic == "" {
-        return json(400, "{\"ok\":false,\"error\":\"topic is required\"}")
-    }
-    if rho_str_index_of(topic, "energy.fault") == 0 {
-        warn("aquarium", "energy fault: " + payload)
-        notification_live_event("warning", "Energy: " + payload)
-    } else {
-        notification_live_event("info", "Mesh " + topic + ": " + payload)
-    }
-    return json(status_ok(), "{\"ok\":true}")
-}
-
+// init seeds what the presets say — categories, rules and modes, chores, the
+// values the aquarium offers, the simulated devices — moves an older
+// installation's records, and makes the first tank of a new one.
 fn init() void {
     log_config_apply("aquarium")
     info("aquarium", "starting")
-    aqua_hydrate_gateway_settings()
-    aquarium_mesh_register()
+    aqua_presets_refresh()
+    ignore_u32(inventory_presets(rho_asset("aquarium", "presets/inventory.yml")))
+    ignore_u32(rules_presets(rho_asset("aquarium", "presets/rules.yml")))
+    ignore_u32(scheduler_presets(rho_asset("aquarium", "presets/schedule.yml")))
+    ignore_u32(appapi_presets(rho_asset("aquarium", "presets/api.yml")))
+    ignore_u32(simulator.presets(rho_asset("aquarium", "presets/sim.yml")))
+    aqua_migrate()
+    if aqua_tank(0).id == 0 {
+        ignore_u32(aqua_add_tank("Aquarium", 0, "planted", "10:00", "20:00", ""))
+    }
 }
 
-// background follows the project's live stream and refreshes the widgets when a
-// reading arrives, and keeps the Mesh registration alive every 30 seconds.
+// background follows the live feed and refreshes the dashboard when a reading
+// arrives, runs the rules every five seconds and on every reading, moves the
+// simulated devices while the simulator is the gateway, keeps the values the
+// aquarium offers every minute, counts equipment runtime hourly and prunes the
+// journal daily.
 fn background() void {
     var ticks: u32 = 0
     while true {
         ticks = ticks + 1
-        if widgets_live_changed() {
+        if ticks % 10 == 5 && rho_str_eq(gateway.provider(), "simulator") {
+            ignore_u32(simulator.tick())
+        }
+        let reading: bool = widgets_live_changed()
+        if reading {
             ignore_u32(widgets_refresh_all())
         }
-        if ticks % 60 == 0 {
-            if settings_get("aquarium.mesh_client_id", "") == "" {
-                aquarium_mesh_register()
-            } else {
-                aquarium_heartbeat()
-            }
+        if reading || ticks % 10 == 0 {
+            ignore_u32(rules_tick())
+        }
+        if ticks % 120 == 10 {
+            ignore_u32(appapi_tick())
+        }
+        // Older widgets' Mesh URLs move to stable ids even while no reading
+        // arrives; nothing is asked of the gateway when none is left.
+        if ticks % 120 == 30 {
+            ignore_u32(widgets_migrate_sources())
+        }
+        if ticks % 7200 == 0 {
+            ignore_u32(inventory_runtime_tick())
+            ignore_u32(scheduler_usage_tick())
+        }
+        if ticks % 172800 == 1 {
+            ignore_u32(journal_prune())
         }
         rho_sleep_ms(500)
     }
 }
-
-fn aquarium_home(req: Request) Response {
-    let body: string = template_fill(template_get("home"),
-        i18n_vars(req) + vars("widgets", widgets_dashboard_cards(true, i18n_locale(req))))
-    let document: string = template_fill(template_get("layout"),
-        vars("title", "Aquarium") + vars("htmx", htmx_head()) + i18n_vars(req) + vars("body", body) +
-        vars("keeper", aquarium_keeper_link()) +
-        vars("notifications", notification_embed()) +
-        vars("forms_style", forms_style()) +
-        vars("widgets_style", widgets_style()))
-    return html(status_ok(), document)
-}
-
-route POST "/api/aquarium/mesh/events" => aquarium_mesh_event

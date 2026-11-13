@@ -1,0 +1,136 @@
+//
+// @file tank.rho
+// @brief The tanks of an installation: their size, kind and light hours, and the one the pages show.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+fn tank_page(req: Request) Response {
+    return tank_page_message(req, aqua_tank_param(req), request_query_param(req, "msg"))
+}
+
+fn tank_page_message(req: Request, tank: AquaTank, message: string) Response {
+    var list: string = ""
+    let opened: Result[SqlDb, string] = aqua_open()
+    if opened.is_ok {
+        let rows: AquariumTanks[32]
+        let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+        let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+        sql_close(opened.ok)
+        if listed.is_ok {
+            var i: u32 = 0
+            while i < listed.ok {
+                var mark: string = ""
+                if u32(rows[i].id) == tank.id {
+                    mark = " class=\"sel\""
+                }
+                list = list + "<tr" + mark + "><td><a href=\"/tank?tank=" + rho_int_to_str(u32(rows[i].id)) + "\"><b>" +
+                    escape_html(rows[i].name) + "</b></a><br><small><code>" + escape_html(rows[i].handle) + "</code></small></td><td>" +
+                    rho_int_to_str(u32(rows[i].volumeL)) + " L</td><td>" + escape_html(aqua_type_label(rows[i].typeValue)) +
+                    "</td><td>" + escape_html(rows[i].lightsOn + "–" + rows[i].lightsOff) + "</td></tr>\n"
+                i = i + 1
+            }
+        }
+    }
+    var edit: string = ""
+    if tank.id > 0 {
+        edit = "<section class=\"rh-card wide\"><h2>" + escape_html(tank.name) + "</h2>" +
+            "<form method=\"post\" action=\"/tank\" class=\"aq-form grid-form\">" + forms_csrf_field() +
+            "<input type=\"hidden\" name=\"id\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+            aqua_tank_fields(req, tank) +
+            "<label class=\"check\"><input type=\"checkbox\" name=\"primary\" value=\"1\"> " + i18n_t(req, "tank.primary") + "</label>" +
+            "<div><button class=\"primary\">" + i18n_t(req, "tank.save") + "</button></div></form>" +
+            "<p class=\"hint\">" + i18n_t(req, "tank.kind_hint") + "</p></section>"
+    }
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "tank.title") + "</h1><p>" + i18n_t(req, "tank.lede") + "</p></div>" +
+        "<section class=\"rh-card wide\"><table><thead><tr><th>" + i18n_t(req, "tank.name") + "</th><th>" +
+        i18n_t(req, "tank.volume") + "</th><th>" + i18n_t(req, "tank.kind") + "</th><th>" + i18n_t(req, "tank.lights") +
+        "</th></tr></thead><tbody>" + list + "</tbody></table></section>" + edit +
+        "<section class=\"rh-card wide\"><h2>" + i18n_t(req, "tank.add") + "</h2>" +
+        "<form method=\"post\" action=\"/tank/add\" class=\"aq-form grid-form\">" + forms_csrf_field() +
+        aqua_tank_fields(req, aqua_no_tank()) +
+        "<div><button>" + i18n_t(req, "tank.add") + "</button></div></form></section>"
+    return host_shell(req, i18n_t(req, "tank.title"), body, aqua_toast(message))
+}
+
+fn aqua_tank_fields(req: Request, tank: AquaTank) string {
+    var volume: string = ""
+    if tank.volume > 0 {
+        volume = rho_int_to_str(tank.volume)
+    }
+    var kind: string = tank.kind
+    if kind == "" {
+        kind = "planted"
+    }
+    var lights_on: string = tank.lights_on
+    if lights_on == "" {
+        lights_on = "10:00"
+    }
+    var lights_off: string = tank.lights_off
+    if lights_off == "" {
+        lights_off = "20:00"
+    }
+    return "<label>" + i18n_t(req, "tank.name") + "<input name=\"name\" required value=\"" + escape_html(tank.name) + "\"></label>" +
+        "<label>" + i18n_t(req, "tank.volume") + " (L)<input name=\"volume\" inputmode=\"numeric\" value=\"" + escape_html(volume) + "\"></label>" +
+        "<label>" + i18n_t(req, "tank.kind") + "<select name=\"kind\">" + aqua_option_list(aqua_type_choices(), kind, "—") + "</select></label>" +
+        "<label>" + i18n_t(req, "tank.lights_on") + "<input name=\"lights_on\" value=\"" + escape_html(lights_on) + "\" placeholder=\"10:00\"></label>" +
+        "<label>" + i18n_t(req, "tank.lights_off") + "<input name=\"lights_off\" value=\"" + escape_html(lights_off) + "\" placeholder=\"20:00\"></label>" +
+        "<label>" + i18n_t(req, "water.note") + "<input name=\"notes\" value=\"" + escape_html(tank.notes) + "\"></label>"
+}
+
+fn tank_save(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "id")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return tank_page_message(req, tank, i18n_t(req, "form.expired"))
+    }
+    let name: string = aqua_form(body, "name")
+    var kind: string = aqua_form(body, "kind")
+    if kind == "" {
+        kind = tank.kind
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok || name == "" {
+        return tank_page_message(req, tank, i18n_t(req, "tank.need"))
+    }
+    aqua_ignore(UpdateTank(name, i64(rho_int_from_str(aqua_form(body, "volume"))), kind, aqua_form(body, "lights_on"),
+        aqua_form(body, "lights_off"), aqua_form(body, "notes"), i64(tank.id), opened.ok))
+    sql_close(opened.ok)
+    if !rho_str_eq(kind, tank.kind) {
+        // A tank that changed kind takes the new kind's bands.
+        aqua_seed_targets(tank.id, kind, true)
+    }
+    if rho_str_eq(aqua_form(body, "primary"), "1") {
+        settings_set("aquarium.tank", rho_int_to_str(tank.id))
+    }
+    journal_info("tank", tank.handle, "person", "tank saved")
+    return tank_page_message(req, aqua_tank(tank.id), i18n_t(req, "tank.saved"))
+}
+
+fn tank_add(req: Request) Response {
+    let body: string = request_body(req)
+    if !forms_csrf_ok(body) {
+        return tank_page_message(req, aqua_tank(0), i18n_t(req, "form.expired"))
+    }
+    let name: string = aqua_form(body, "name")
+    if name == "" {
+        return tank_page_message(req, aqua_tank(0), i18n_t(req, "tank.need"))
+    }
+    var kind: string = aqua_form(body, "kind")
+    if kind == "" {
+        kind = "planted"
+    }
+    let id: u32 = aqua_add_tank(name, rho_int_from_str(aqua_form(body, "volume")), kind,
+        aqua_form(body, "lights_on"), aqua_form(body, "lights_off"), aqua_form(body, "notes"))
+    if id == 0 {
+        return tank_page_message(req, aqua_tank(0), i18n_t(req, "tank.taken"))
+    }
+    return tank_page_message(req, aqua_tank(id), i18n_t(req, "tank.added"))
+}

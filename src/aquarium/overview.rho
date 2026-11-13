@@ -1,0 +1,445 @@
+//
+// @file overview.rho
+// @brief The overview — the tank at a glance — and the equipment page.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+// The overview reads what the shared modules keep — the equipment in the
+// inventory, the schedule, the rules, the journal — through their generated
+// statements, which are part of this program; it keeps nothing of its own.
+
+/* -------------------------------------------------------------------------- */
+/*  Readings                                                                  */
+/* -------------------------------------------------------------------------- */
+
+// aqua_latest is a tank's newest value of a parameter: the sensor's for the
+// temperature when there is one, the newest test's otherwise; "" when none.
+fn aqua_latest(tank: AquaTank, parameter: string) string {
+    if rho_str_eq(parameter, "temperature") {
+        let live: string = appapi_value("water_temperature")
+        if live != "" {
+            return aqua_round(live, 1)
+        }
+    }
+    let published: string = appapi_value(tank.handle + "." + parameter)
+    if published != "" {
+        return published
+    }
+    // A test kept before the values were offered: read from the tests.
+    let tests: AquariumTests[500]
+    let count: u32 = aqua_tests_into(tank.id, 0, Slice[AquariumTests]{ Ptr[AquariumTests](&tests[0]), AQUA_ROWS })
+    var i: u32 = 0
+    while i < count {
+        if rho_str_eq(tests[i].parameter, parameter) {
+            return aqua_decimal(tests[i].valueMilli)
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+fn aqua_reading(req: Request, tank: AquaTank, parameter: string) string {
+    let value: string = aqua_latest(tank, parameter)
+    let band: AquaBand = aqua_band(tank.id, parameter)
+    var state: string = i18n_t(req, "overview.no_reading")
+    var tone: string = ""
+    var shown: string = "—"
+    if value != "" {
+        shown = escape_html(value)
+        let where: string = aqua_in_band(band, aqua_number(value).milli)
+        if rho_str_eq(where, "in") {
+            state = i18n_t(req, "overview.in_band") + " " + aqua_band_text(band)
+        } else if rho_str_eq(where, "high") {
+            state = i18n_t(req, "overview.above") + " " + aqua_decimal(band.high)
+            tone = " w"
+        } else if rho_str_eq(where, "low") {
+            state = i18n_t(req, "overview.below") + " " + aqua_decimal(band.low)
+            tone = " w"
+        } else {
+            state = ""
+        }
+    }
+    return "<div class=\"reading\"><div class=\"k\">" + escape_html(aqua_parameter_label(parameter)) + "</div><div class=\"v\">" +
+        shown + "<small>" + escape_html(aqua_parameter_unit(parameter)) + "</small></div><div class=\"s" + tone + "\">" +
+        escape_html(state) + "</div></div>"
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Equipment                                                                 */
+/* -------------------------------------------------------------------------- */
+
+// aqua_driven_by is what drives an item: the rules that switch it, or manual.
+fn aqua_driven_by(rules: Rules[256], count: u32, handle: string) string {
+    if handle == "" {
+        return ""
+    }
+    var out: string = ""
+    var i: u32 = 0
+    while i < count {
+        if rules[i].enabled != 0 && (rho_str_index_of(rules[i].doActions + " " + rules[i].elseActions, "switch " + handle + " ") >= 0) {
+            if out != "" {
+                out = out + ", "
+            }
+            out = out + rules[i].name
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn aqua_switch_form(handle: string, on: bool, back: string) string {
+    var next: string = "on"
+    var css: string = "sw"
+    if on {
+        next = "off"
+        css = "sw on"
+    }
+    return "<form method=\"post\" action=\"/equipment/switch\" class=\"inline\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"handle\" value=\"" + escape_html(handle) + "\">" +
+        "<input type=\"hidden\" name=\"state\" value=\"" + next + "\">" +
+        "<input type=\"hidden\" name=\"back\" value=\"" + escape_html(back) + "\">" +
+        "<button class=\"" + css + "\" title=\"" + next + "\" aria-label=\"" + escape_html(handle) + " " + next + "\"></button></form>"
+}
+
+fn aqua_is_on(value: string) bool {
+    return rho_str_eq(value, "on") || rho_str_eq(value, "1") || rho_str_eq(value, "true")
+}
+
+/// What the equipment rows need, read once.
+struct AquaEquipment {
+    html: string
+    count: u32
+    power: i64
+}
+
+// aqua_equipment_rows is the equipment items, compact (the overview) or as a
+// table (the equipment page), and the power they draw together.
+fn aqua_equipment_rows(req: Request, compact: bool, back: string) AquaEquipment {
+    var out: AquaEquipment = AquaEquipment{ "", 0, 0 }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return out
+    }
+    let db: SqlDb = opened.ok
+    let items: ListItemsRow[512]
+    let item_slice: Slice[ListItemsRow] = Slice[ListItemsRow]{ Ptr[ListItemsRow](&items[0]), 512 }
+    let listed: Result[u32, SqlError] = ListItems(db, item_slice, 512)
+    let bindings: ListBindingsRow[512]
+    let binding_slice: Slice[ListBindingsRow] = Slice[ListBindingsRow]{ Ptr[ListBindingsRow](&bindings[0]), 512 }
+    let bound: Result[u32, SqlError] = ListBindings(db, binding_slice, 512)
+    let rules: Rules[256]
+    let rule_slice: Slice[Rules] = Slice[Rules]{ Ptr[Rules](&rules[0]), 256 }
+    let rule_list: Result[u32, SqlError] = ListRulesAll(db, rule_slice, 256)
+    sql_close(db)
+    if !listed.is_ok {
+        return out
+    }
+    var binding_count: u32 = 0
+    if bound.is_ok {
+        binding_count = bound.ok
+    }
+    var rule_count: u32 = 0
+    if rule_list.is_ok {
+        rule_count = rule_list.ok
+    }
+    var i: u32 = 0
+    while i < listed.ok {
+        let row: ListItemsRow = items[i]
+        if rho_str_eq(row.kind, "equipment") {
+            out.count = out.count + 1
+            let switch_source: string = inventory_binding_source(bindings, binding_count, row.id, "switch")
+            let power_source: string = inventory_binding_source(bindings, binding_count, row.id, "power")
+            var state: string = ""
+            if switch_source != "" {
+                state = gateway.source_latest(switch_source)
+            }
+            var power: string = ""
+            if power_source != "" {
+                power = aqua_round(gateway.source_latest(power_source), 1)
+                let watts: AquaNumber = aqua_number(power)
+                if watts.ok {
+                    out.power = out.power + watts.milli
+                }
+            }
+            let driven: string = aqua_driven_by(rules, rule_count, row.handle)
+            var badge: string = "<span class=\"badge\">" + i18n_t(req, "equipment.manual") + "</span>"
+            if driven != "" {
+                badge = "<span class=\"badge auto\" title=\"" + escape_html(driven) + "\">" + i18n_t(req, "equipment.rule") + "</span>"
+            }
+            var control: string = ""
+            if switch_source != "" && row.handle != "" {
+                control = aqua_switch_form(row.handle, aqua_is_on(state), back)
+            } else if row.capabilities != "" {
+                control = "<a class=\"quiet\" href=\"/expenses/items/automation?id=" + rho_int_to_str(u32(row.id)) + "\">" +
+                    i18n_t(req, "equipment.connect") + "</a>"
+            }
+            var detail: string = row.category
+            if power != "" {
+                detail = detail + " · " + power + " W"
+            }
+            if row.runtimeS > 0 {
+                detail = detail + " · " + rho_int_to_str(u32(row.runtimeS) / 3600) + " h"
+            }
+            if compact {
+                out.html = out.html + "<div class=\"row\"><div><div class=\"t\">" + escape_html(row.name) + "</div><div class=\"d\">" +
+                    escape_html(detail) + "</div></div>" + badge + control + "</div>\n"
+            } else {
+                var sources: string = ""
+                var j: u32 = 0
+                while j < binding_count {
+                    if bindings[j].itemId == row.id {
+                        sources = sources + "<code>" + escape_html(bindings[j].capability + " → " + bindings[j].source) + "</code><br>"
+                    }
+                    j = j + 1
+                }
+                if sources == "" {
+                    sources = "<span class=\"hint\">" + i18n_t(req, "equipment.not_bound") + "</span>"
+                }
+                var by: string = driven
+                if by == "" {
+                    by = i18n_t(req, "equipment.manual")
+                }
+                out.html = out.html + "<tr><td><b><a href=\"/expenses/items/automation?id=" + rho_int_to_str(u32(row.id)) + "\">" +
+                    escape_html(row.name) + "</a></b><br><small>" + escape_html(row.category) + "</small></td><td><code>" +
+                    escape_html(row.handle) + "</code></td><td>" + sources + "</td><td>" + escape_html(by) + "</td><td class=\"num\">" +
+                    rho_int_to_str(u32(row.runtimeS) / 3600) + " h</td><td>" + control + "</td></tr>\n"
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn equipment_page(req: Request) Response {
+    let rows: AquaEquipment = aqua_equipment_rows(req, false, "/equipment")
+    var table: string = rows.html
+    if table == "" {
+        table = "<tr><td colspan=\"6\">" + i18n_t(req, "equipment.none") + "</td></tr>"
+    }
+    var notice: string = ""
+    if !inventory_automated() {
+        notice = "<p class=\"notice\">" + i18n_t(req, "inventory.no_gateway") + "</p>"
+    }
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "equipment.title") + "</h1><p>" + i18n_t(req, "equipment.lede") +
+        "</p></div>" + notice + "<section class=\"rh-card wide\"><table><thead><tr><th>" + i18n_t(req, "equipment.item") +
+        "</th><th>" + i18n_t(req, "inventory.handle") + "</th><th>" + i18n_t(req, "equipment.bound") + "</th><th>" +
+        i18n_t(req, "equipment.driven") + "</th><th>" + i18n_t(req, "equipment.runtime") + "</th><th></th></tr></thead><tbody>" +
+        table + "</tbody></table><p class=\"hint\">" + i18n_t(req, "equipment.hint") + " <a href=\"/expenses\">" +
+        i18n_t(req, "nav.inventory") + "</a>. " + i18n_t(req, "equipment.roles_hint") + " <a href=\"/devices\">" +
+        i18n_t(req, "nav.devices") + "</a>.</p></section>"
+    return host_shell(req, i18n_t(req, "equipment.title"), body, aqua_toast(request_query_param(req, "msg")))
+}
+
+fn equipment_switch(req: Request) Response {
+    let body: string = request_body(req)
+    var back: string = aqua_form(body, "back")
+    if !rho_str_starts_with(back, "/") || rho_str_starts_with(back, "//") {
+        back = "/"
+    }
+    if !forms_csrf_ok(body) {
+        return redirect(back)
+    }
+    let handle: string = aqua_form(body, "handle")
+    let on: bool = rho_str_eq(aqua_form(body, "state"), "on")
+    if !inventory_switch(handle, on, "person") {
+        return redirect(back + "?msg=" + handle + "+could+not+be+switched")
+    }
+    journal_info("switch", handle, "person", handle + " switched " + aqua_form(body, "state"))
+    return redirect(back)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  The overview                                                              */
+/* -------------------------------------------------------------------------- */
+
+// aqua_temperature_chart is the last day of the heater's temperature, with the
+// tank's band behind it.
+fn aqua_temperature_chart(req: Request, tank: AquaTank) string {
+    let source: string = inventory_resolve("heater", "temperature")
+    if source == "" {
+        return "<p class=\"hint\">" + i18n_t(req, "overview.no_probe") + "</p>"
+    }
+    let now: u32 = aqua_now()
+    let series: string = gateway.source_history(source, rho_int_to_str(now - 86400) + "000", rho_int_to_str(now) + "000", "1800000")
+    let summary: AppapiSummary = appapi_summary(series)
+    if summary.count < 2 {
+        return "<p class=\"hint\">" + i18n_t(req, "overview.not_enough") + "</p>"
+    }
+    let band: AquaBand = aqua_band(tank.id, "temperature")
+    var low: i64 = summary.low
+    var high: i64 = summary.high
+    if band.known && band.low < low {
+        low = band.low
+    }
+    if band.known && band.high > high {
+        high = band.high
+    }
+    low = low - 500
+    high = high + 500
+    let span: i64 = high - low
+    var points: string = ""
+    var rest: string = series
+    var n: u32 = 0
+    while rest != "" {
+        let at: i32 = rho_str_index_of(rest, "\"v\":")
+        if at < 0 {
+            rest = ""
+        } else {
+            rest = rho_str_slice(rest, u32(at) + 4, u32(rho_strlen(rest)) - u32(at) - 4)
+            var end: u32 = 0
+            while end < u32(rho_strlen(rest)) && !rho_str_eq(rho_str_slice(rest, end, 1), ",") && !rho_str_eq(rho_str_slice(rest, end, 1), "}") {
+                end = end + 1
+            }
+            let v: AquaNumber = aqua_number(rho_str_slice(rest, 0, end))
+            if v.ok {
+                let x: u32 = (n * 300) / (summary.count - 1)
+                let y: i64 = 90 - ((v.milli - low) * 90) / span
+                points = points + rho_int_to_str(x) + "," + aqua_i64(y) + " "
+                n = n + 1
+            }
+        }
+    }
+    var band_rect: string = ""
+    if band.known {
+        let top: i64 = 90 - ((band.high - low) * 90) / span
+        let bottom: i64 = 90 - ((band.low - low) * 90) / span
+        band_rect = "<rect x=\"0\" y=\"" + aqua_i64(top) + "\" width=\"300\" height=\"" + aqua_i64(bottom - top) + "\" fill=\"var(--teal-soft)\"/>"
+    }
+    return "<svg class=\"chart\" viewBox=\"0 0 300 90\" preserveAspectRatio=\"none\" role=\"img\" aria-label=\"" +
+        escape_html(i18n_t(req, "overview.temperature_24h")) + "\">" + band_rect +
+        "<polyline fill=\"none\" stroke=\"var(--gold)\" stroke-width=\"2\" stroke-linejoin=\"round\" points=\"" + points +
+        "\"/></svg><div class=\"note\">" + i18n_t(req, "overview.band_note") + "</div>"
+}
+
+// aqua_care_rows is what is due: chores due or overdue, and stock to reorder.
+fn aqua_care_rows(req: Request) string {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return ""
+    }
+    let db: SqlDb = opened.ok
+    let chores: Chores[256]
+    let chore_slice: Slice[Chores] = Slice[Chores]{ Ptr[Chores](&chores[0]), 256 }
+    let listed: Result[u32, SqlError] = ListChores(db, chore_slice, 256)
+    let low: LowStockItemsRow[128]
+    let low_slice: Slice[LowStockItemsRow] = Slice[LowStockItemsRow]{ Ptr[LowStockItemsRow](&low[0]), 128 }
+    let reorder: Result[u32, SqlError] = LowStockItems(db, low_slice, 128)
+    sql_close(db)
+    let now: u32 = aqua_now()
+    var out: string = ""
+    var shown: u32 = 0
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok && shown < 4 {
+            let status: string = scheduler_status(chores[i], now)
+            if chores[i].enabled != 0 && (rho_str_eq(status, "due") || rho_str_eq(status, "overdue")) {
+                out = out + "<div class=\"row\"><div><div class=\"t\">" + escape_html(chores[i].title) + "</div><div class=\"d\">" +
+                    escape_html(scheduler_links_text(chores[i])) + "</div></div><span class=\"badge due\">" + escape_html(status) +
+                    "</span><a class=\"quiet\" href=\"/scheduler\">" + i18n_t(req, "overview.open") + "</a></div>\n"
+                shown = shown + 1
+            }
+            i = i + 1
+        }
+    }
+    if reorder.is_ok {
+        var j: u32 = 0
+        while j < reorder.ok && j < 3 {
+            out = out + "<div class=\"row\"><div><div class=\"t\">" + escape_html(low[j].name) + "</div><div class=\"d\">" +
+                escape_html(inventory_quantity(low[j].quantityMilli) + " " + low[j].unit + " · " + i18n_t(req, "overview.reorder_at") +
+                " " + inventory_quantity(low[j].reorderMilli)) + "</div></div><span class=\"badge low\">" +
+                i18n_t(req, "overview.low") + "</span><a class=\"quiet\" href=\"/expenses\">" + i18n_t(req, "overview.buy") + "</a></div>\n"
+            j = j + 1
+        }
+    }
+    if out == "" {
+        out = "<p class=\"hint\">" + i18n_t(req, "overview.nothing_due") + "</p>"
+    }
+    return out
+}
+
+fn aqua_journal_rows() string {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return ""
+    }
+    let rows: JournalEntries[500]
+    let slice: Slice[JournalEntries] = Slice[JournalEntries]{ Ptr[JournalEntries](&rows[0]), 500 }
+    let listed: Result[u32, SqlError] = ListJournalEntries("0", "", "", opened.ok, slice, 500)
+    sql_close(opened.ok)
+    var out: string = ""
+    if listed.is_ok {
+        let offset: i64 = journal_offset()
+        var i: u32 = 0
+        while i < listed.ok && i < 6 {
+            var tone: string = ""
+            if !rho_str_eq(rows[i].level, "info") {
+                tone = " class=\"" + rows[i].level + "\""
+            }
+            out = out + "<div class=\"ev\"><time>" + escape_html(rho_str_slice(journal_time(rows[i].at, offset), 11, 5)) +
+                "</time><div" + tone + "><b>" + escape_html(rows[i].subject) + "</b> " + escape_html(rows[i].message) + "</div></div>\n"
+            i = i + 1
+        }
+    }
+    return out
+}
+
+fn aquarium_home(req: Request) Response {
+    let tank: AquaTank = aqua_tank_param(req)
+    if tank.id == 0 {
+        return redirect("/tank")
+    }
+    let mode: string = rules_mode()
+    var status: string = i18n_t(req, "overview.running")
+    if mode != "" {
+        status = i18n_t(req, "overview.mode") + " " + mode
+    }
+    let light: string = inventory_read("light", "switch")
+    if light != "" {
+        if aqua_is_on(light) {
+            status = status + " · " + i18n_t(req, "overview.lights_on_until") + " " + tank.lights_off
+        } else {
+            status = status + " · " + i18n_t(req, "overview.lights_off_until") + " " + tank.lights_on
+        }
+    }
+    let days: string = appapi_value("days_since_water_change")
+    if days != "" {
+        let whole: i64 = aqua_number(days).milli / 1000
+        if whole < 1 {
+            status = status + " · " + i18n_t(req, "overview.water_changed_today")
+        } else {
+            status = status + " · " + i18n_t(req, "overview.water_changed") + " " + aqua_i64(whole) + " " + i18n_t(req, "overview.days_ago")
+        }
+    }
+    let equipment: AquaEquipment = aqua_equipment_rows(req, true, "/")
+    var equipment_rows: string = equipment.html
+    if equipment_rows == "" {
+        equipment_rows = "<p class=\"hint\">" + i18n_t(req, "equipment.none") + "</p>"
+    }
+    var power: string = "—"
+    if equipment.power > 0 {
+        power = aqua_round(aqua_decimal(equipment.power), 1)
+    }
+    let body: string = template_fill(template_get("overview"),
+        i18n_vars(req) +
+        vars("tank", tank.name) +
+        vars("volume", rho_int_to_str(tank.volume)) +
+        vars("kind", aqua_type_label(tank.kind)) +
+        vars("status", status) +
+        vars("r_temperature", aqua_reading(req, tank, "temperature")) +
+        vars("r_ph", aqua_reading(req, tank, "ph")) +
+        vars("r_no3", aqua_reading(req, tank, "no3")) +
+        vars("power", power) +
+        vars("equipment", equipment_rows) +
+        vars("chart", aqua_temperature_chart(req, tank)) +
+        vars("care", aqua_care_rows(req)) +
+        vars("journal", aqua_journal_rows()))
+    return host_shell(req, tank.name, body, aqua_toast(request_query_param(req, "msg")))
+}

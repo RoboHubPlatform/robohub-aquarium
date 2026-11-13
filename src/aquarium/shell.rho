@@ -1,0 +1,133 @@
+//
+// @file shell.rho
+// @brief The RoboHub shell every aquarium page is drawn in — top bar, rail of places — and the docs page.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+// Every page is drawn through host_shell, the aquarium's and the shared modules'
+// alike (inventory, scheduler, rules, journal, widgets), so they all have the
+// same top bar, rail and look (robohub.ui), in the dark or the light theme.
+
+fn aqua_rail_link(req: Request, href: string, icon: string, label: string, extra: string) string {
+    let path: string = request_path(req)
+    var on: string = ""
+    if rho_str_eq(path, href) || (!rho_str_eq(href, "/") && rho_str_starts_with(path, href)) {
+        on = " class=\"on\""
+    }
+    var phone: string = ""
+    if rho_str_eq(href, "/") || rho_str_eq(href, "/equipment") || rho_str_eq(href, "/water") || rho_str_eq(href, "/rules") {
+        phone = " data-phone"
+    }
+    return "<a" + on + phone + " href=\"" + href + "\"><i>" + icon + "</i>" + escape_html(label) + extra + "</a>"
+}
+
+fn aqua_count(n: u32, css: string) string {
+    if n == 0 {
+        return ""
+    }
+    return "<span class=\"n" + css + "\">" + rho_int_to_str(n) + "</span>"
+}
+
+// aqua_rail is the places, grouped as the work is: the tank, its care, what runs
+// by itself, and the system.
+fn aqua_rail(req: Request) string {
+    let open: u32 = journal_open_count()
+    return aqua_rail_link(req, "/", "◉", i18n_t(req, "nav.overview"), "") +
+        "<h6>" + i18n_t(req, "nav.group.tank") + "</h6>" +
+        aqua_rail_link(req, "/equipment", "▣", i18n_t(req, "nav.equipment"), "") +
+        "<a class=\"sub\" href=\"/devices\">" + escape_html(i18n_t(req, "nav.devices")) + "</a>" +
+        aqua_rail_link(req, "/water", "≈", i18n_t(req, "nav.water"), "") +
+        aqua_rail_link(req, "/dosing", "⚗", i18n_t(req, "nav.dosing"), "") +
+        aqua_rail_link(req, "/livestock", "❦", i18n_t(req, "nav.livestock"), "") +
+        "<h6>" + i18n_t(req, "nav.group.care") + "</h6>" +
+        aqua_rail_link(req, "/scheduler", "◷", i18n_t(req, "nav.schedule"), "") +
+        aqua_rail_link(req, "/expenses", "▤", i18n_t(req, "nav.inventory"), "") +
+        "<h6>" + i18n_t(req, "nav.group.automation") + "</h6>" +
+        aqua_rail_link(req, "/rules", "⚙", i18n_t(req, "nav.rules"), "") +
+        aqua_rail_link(req, "/journal", "☰", i18n_t(req, "nav.journal"), aqua_count(open, "")) +
+        aqua_rail_link(req, "/widgets", "▦", i18n_t(req, "nav.dashboard"), "") +
+        "<h6>" + i18n_t(req, "nav.group.system") + "</h6>" +
+        aqua_rail_link(req, "/tank", "▭", i18n_t(req, "nav.tank"), "") +
+        aqua_rail_link(req, "/settings", "⚑", i18n_t(req, "nav.settings"), "") +
+        aqua_rail_link(req, "/docs", "▧", i18n_t(req, "nav.docs"), "")
+}
+
+// aqua_middle is what the top bar says about the installation: where readings
+// come from, the mode in force, and the feeding button.
+fn aqua_middle(req: Request) string {
+    var gateway_name: string = gateway.provider()
+    var gateway_label: string = i18n_t(req, "top.no_gateway")
+    if rho_str_eq(gateway_name, "simulator") {
+        gateway_label = i18n_t(req, "top.simulator")
+    } else if gateway_name != "" {
+        var project: string = gateway.config("project")
+        if project == "" {
+            project = "Mesh"
+        }
+        gateway_label = project + " · Mesh · " + gateway.transport()
+    }
+    let mode: string = rules_mode()
+    var mode_label: string = i18n_t(req, "top.auto")
+    var feed: string = "<form method=\"post\" action=\"/rules/mode\" class=\"inline\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"mode\" value=\"feeding\"><button class=\"quiet\">" + i18n_t(req, "top.feed") + "</button></form>"
+    if mode != "" {
+        mode_label = mode
+        feed = "<form method=\"post\" action=\"/rules/mode\" class=\"inline\">" + forms_csrf_field() +
+            "<input type=\"hidden\" name=\"end\" value=\"1\"><button class=\"quiet\">" + i18n_t(req, "top.end_mode") + "</button></form>"
+    }
+    return "<span class=\"aq-chip ok\">" + escape_html(gateway_label) + "</span><span class=\"aq-chip mode\">" +
+        escape_html(mode_label) + "</span>" + feed
+}
+
+fn aqua_topbar(req: Request) string {
+    let keeper_port: string = getenv("RHO_KEEPER_PORT")
+    var who: string = header_str(req, "X-Rho-Subject")
+    if who == "" {
+        who = i18n_t(req, "top.signed_in")
+    }
+    var signout: string = ""
+    if keeper_port != "" {
+        signout = "<a class=\"app-open\" href=\"#\" data-app-port=\"" + escape_html(keeper_port) +
+            "\" data-app-route=\"/logout\">" + i18n_t(req, "top.sign_out") + "</a>"
+    }
+    return ui_topbar_remote("aquarium", "Aquarium", keeper_port, aqua_middle(req),
+        ui_person(req, who, "", ui_language(i18n_locale(req), request_path(req)), signout, true))
+}
+
+fn aqua_page(req: Request, title: string, body: string) Response {
+    let document: string = template_fill(template_get("layout"),
+        vars("title", title) +
+        vars("theme", ui_theme(req)) +
+        vars("ui_head", ui_head()) +
+        vars("htmx", htmx_head()) +
+        i18n_vars(req) +
+        vars("topbar", aqua_topbar(req)) +
+        vars("nav", aqua_rail(req)) +
+        vars("body", body) +
+        vars("notifications", notification_embed()) +
+        vars("forms_style", forms_style()) +
+        vars("widgets_style", widgets_style()))
+    return html(status_ok(), document)
+}
+
+// host_shell is how every module draws a page inside the aquarium.
+fn host_shell(req: Request, title: string, body: string, scripts: string) Response {
+    return aqua_page(req, title, body + scripts)
+}
+
+fn aquarium_docs(req: Request) Response {
+    var content: string = rho_asset("aquarium", "docs/index.md")
+    if content == "" {
+        content = "No documentation found."
+    }
+    return host_shell(req, i18n_t(req, "nav.docs"), "<div class=\"ph\"><h1>" + i18n_t(req, "nav.docs") +
+        "</h1></div><section class=\"rh-card wide\"><pre class=\"docs\">" + escape_html(content) + "</pre></section>", "")
+}

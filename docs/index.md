@@ -1,116 +1,48 @@
 # Aquarium
 
-The aquarium application is one HTTP service on one port. Its own domain
-handlers and the reusable modules it carries register on the same router.
+The RoboHub aquarium: a tank's water, the equipment that keeps it, and the care
+it needs. It is a keeper-hosted application, and it reaches devices only through
+the gateway interface — the Mesh provider for real devices, or the simulator.
 
-The modules it carries share its router, port and workspace:
+## What is the aquarium's own
 
-- the inventory and expense tracker under `/expenses`;
-- the scheduler under `/scheduler`, with its chores API under `/api/scheduler`;
-- the widgets module under `/widgets`, which renders the dashboard cards on the
-  home page and serves `/api/widgets`.
+| Place | What it does |
+|---|---|
+| Overview | the tank, its readings against their target bands, equipment and its switches, the last day's temperature, what is due, the journal |
+| Water & chemistry | each parameter's newest reading and trend; history; the tank's target bands; logging a test (a row per parameter, with the kit each used up); water changes |
+| Dosing | what was added to the water, taken off the product's stock |
+| Livestock & plants | what lives in a tank, how many, and losses |
+| Tanks | each tank's volume, kind and light hours, and the one the pages show |
 
-Each module owns its tables and pages; the application owns the router, one main
-SQL database and the workspace the records live in.
+A test outside its band is a journal warning — a notification, open until
+someone resolves it. Each tank's newest results are offered as values
+(`/api/v1/values`): `<tank>.<parameter>`, and `<parameter>` for the first tank, so
+a rule can say `no3 > 25`. A water change logged is the "Water change" chore done.
 
-## Logging
+## What it shares
 
-Aquarium has a Logging tab in Settings: level, text or JSON, a rotating file
-under `$XDG_STATE_HOME/robohub/aquarium/`, size, retention and stderr. The
-aquarium and its included modules share the app logger; standard error remains
-on for journald.
+| Module | What the aquarium uses it for |
+|---|---|
+| inventory | food, test kits, fertilisers, filter media — and the equipment, bound to gateway sources by capability |
+| rules | keeping the temperature, the lights, CO₂ following the light, a filter that stopped; the feeding and maintenance modes |
+| scheduler | water changes, tests, rinsing the filter by its runtime, cleaning the glass |
+| journal | everything that happened |
+| widgets | the dashboard |
+| appapi | the values it offers other applications |
+| simulator | devices to run on without a mesh |
 
-## Mesh client
+What each of them starts with is the aquarium's `presets/`: `inventory.yml`,
+`rules.yml`, `schedule.yml`, `api.yml`, `sim.yml`, and its own `targets.yml`.
 
-The aquarium registers with Mesh as a client of its project and subscribes to
-`energy.fault` and `energy.mode`. Mesh delivers those messages to the
-secret-authenticated callback at `/api/aquarium/mesh/events`, where an energy
-fault becomes a warning toast. Registration and heartbeat go through the gateway
-interface like every other read, each request carrying the application's
-short-lived service token for Mesh, scoped to the project. Mesh's address and
-the project are the gateway binding's settings; the Settings page changes them
-on a running installation.
+## Equipment and its handles
 
-## Dashboard and equipment
+The preset rules name equipment by handle: `heater`, `light`, `filter-main`, `co2`.
+Give an inventory item that handle and bind its capabilities on its Automation
+tab — the heater's switch to its plug and its temperature to a probe — and the
+rules act on it. Until then they read nothing, do nothing, and say so.
 
-The home page is a dashboard: widgets are cards, and the equipment, automation,
-chemistry and mode pages are the framework the board will drive later.
+## Settings
 
-![Aquarium dashboard](./images/dashboard.jpg)
-
-- **Equipment** — devices with a state and a last value. A device can be switched
-  and can report a value; the same row becomes a real pump, light or heater when
-  a node binds it.
-- **Automation** — rules made of a metric, an operator, a threshold and an
-  action. Evaluating a value moves the rule between normal and triggered and
-  writes an audit event. The rule is the policy; the hardware binding is a later
-  layer.
-- **Chemistry** — manual water tests (ammonia, nitrite, nitrate, phosphate, KH,
-  calcium, magnesium) with value, unit, date and note.
-- **Modes** — water change and feeding windows with a duration; the page is
-  where they are started and where normal operation resumes.
-- **Events** — the append-only audit trail of overrides, trips, modes and
-  automation.
-
-The widgets module gives the dashboard number, chart, table, button and switch
-cards. A switch calls its configured hook with the new state and shows it in the
-card; a table shows the latest values as rows, with the point count setting how
-many rows.
-
-All forms are cards: a semi-opaque panel over the aquarium background, with the
-same colours on every module page.
-
-
-## Inventory and expenses
-
-![Inventory and expenses](./images/inventory.jpg)
-
-The inventory module's pages are under `/expenses`: what is on the shelf, what
-it cost and when to reorder.
-
-
-## Scheduler
-
-![Scheduler](./images/scheduler.jpg)
-
-The scheduler's chores are under `/scheduler`, with its API under
-`/api/scheduler`.
-
-
-## Plug switch widget
-
-![Widget manager and switch card](./images/widgets.jpg)
-
-A Shelly Plug M Gen3 registered on a gateway can be driven from the aquarium
-dashboard with a **Switch** widget. In **Mesh source** choose the plug's
-**Switch**; the URL, method and unit are filled from Mesh. Pressing the widget
-sends `state=on` or `state=off`. The gateway polls the plug over HTTP RPC and
-keeps the state and power figure.
-
-The same plug has an input signal, **Power**, which a number, chart or table
-widget can show in watts. A temperature module is an input only, so it is not
-offered to a switch widget. The source list is filtered by both the widget kind
-and the signal's direction.
-
-
-## Settings and Mesh devices
-
-`/settings` names the Mesh URL and the Mesh project. Aquarium asks Mesh for that
-project's gateway (`/mesh/api/projects/{project}/gateway`) and stores the
-returned gateway address automatically. When a widget is created or edited,
-Aquarium reads the project's sources (`/mesh/api/projects/{project}/sources`)
-and offers the signals of its devices, modules and sensors in the **Mesh
-source** selector. Each source carries its direction, unit and the widget kinds
-it can feed; the selector shows only the ones the current kind can use. A
-Switch widget on a device calls the source's action endpoint with the new state,
-so the plug can be turned on and off from the dashboard.
-
-
-The dashboard listens to the widgets event stream, refreshes device states in
-the background, and reads them before rendering, so a plug switched elsewhere is
-correct both on a reload and within two seconds without one.
-
-Charts and tables bound to a Mesh source now read the Mesh telemetry history, so
-the miralis temperature chart shows a real series. Number widgets read the
-latest value from the same store. No widget needs to be recreated: the provider
-recognizes the Mesh value URLs the existing widgets already hold.
+Settings → Gateway chooses where readings come from (Mesh or the simulator),
+Mesh's project, and how its changes arrive (automatic, the broker, or HTTP).
+Mesh's address and the token it is read with come from the keeper.

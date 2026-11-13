@@ -1,0 +1,222 @@
+//
+// @file care.rho
+// @brief Dosing (what was added to a tank, taken off the inventory) and what lives in it.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+/* -------------------------------------------------------------------------- */
+/*  Dosing                                                                    */
+/* -------------------------------------------------------------------------- */
+
+fn dosing_page(req: Request) Response {
+    return dosing_page_message(req, aqua_tank_param(req), request_query_param(req, "msg"))
+}
+
+fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
+    if tank.id == 0 {
+        return host_shell(req, i18n_t(req, "dosing.title"), "<p>" + i18n_t(req, "tank.none") + "</p>", "")
+    }
+    var rows: string = ""
+    let opened: Result[SqlDb, string] = aqua_open()
+    if opened.is_ok {
+        let doses: AquariumDoses[200]
+        let slice: Slice[AquariumDoses] = Slice[AquariumDoses]{ Ptr[AquariumDoses](&doses[0]), 200 }
+        let listed: Result[u32, SqlError] = ListDoses(i64(tank.id), opened.ok, slice, 200)
+        sql_close(opened.ok)
+        let offset: i64 = journal_offset()
+        if listed.is_ok {
+            var i: u32 = 0
+            while i < listed.ok {
+                let named: string = inventory_item_name(doses[i].product)
+                var product: string = aqua_field(named, 0)
+                if product == "" {
+                    product = doses[i].product
+                }
+                rows = rows + "<tr><td><time>" + escape_html(journal_time(doses[i].at, offset)) + "</time></td><td>" +
+                    escape_html(product) + "</td><td class=\"num\">" + escape_html(aqua_decimal(doses[i].amountMilli) + " " + doses[i].unit) +
+                    "</td><td>" + escape_html(doses[i].note) + "</td></tr>\n"
+                i = i + 1
+            }
+        }
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"4\">" + i18n_t(req, "dosing.none") + "</td></tr>"
+    }
+    let products: string = inventory_choices("", "consumable")
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "dosing.title") + "</h1><p>" + escape_html(tank.name) +
+        " · " + i18n_t(req, "dosing.lede") + "</p></div>" +
+        "<section class=\"rh-card wide\"><form method=\"post\" action=\"/dosing\" class=\"aq-form inline-form\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<label>" + i18n_t(req, "dosing.product") + "<select name=\"product\" required>" +
+        aqua_option_list(products, "", i18n_t(req, "dosing.choose")) + "</select></label>" +
+        "<label>" + i18n_t(req, "dosing.amount") + "<input name=\"amount\" inputmode=\"decimal\" required></label>" +
+        "<label>" + i18n_t(req, "water.note") + "<input name=\"note\"></label>" +
+        "<button class=\"primary\">" + i18n_t(req, "dosing.log") + "</button></form>" +
+        "<p class=\"hint\">" + i18n_t(req, "dosing.hint") + "</p>" +
+        "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "dosing.product") + "</th><th>" +
+        i18n_t(req, "dosing.amount") + "</th><th>" + i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + rows +
+        "</tbody></table></section>"
+    return host_shell(req, i18n_t(req, "dosing.title"), body, aqua_toast(message))
+}
+
+fn dosing_add(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return dosing_page_message(req, tank, i18n_t(req, "form.expired"))
+    }
+    let product: string = aqua_form(body, "product")
+    let amount: AquaNumber = aqua_number(aqua_form(body, "amount"))
+    if product == "" || !amount.ok || amount.milli <= 0 {
+        return dosing_page_message(req, tank, i18n_t(req, "dosing.need"))
+    }
+    let named: string = inventory_item_name(product)
+    let unit: string = aqua_field(named, 1)
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return dosing_page_message(req, tank, opened.err)
+    }
+    let note: string = aqua_form(body, "note")
+    aqua_ignore(InsertDose(rho_int_to_str(tank.id), product, aqua_i64(amount.milli), unit, rho_int_to_str(aqua_now()), note, opened.ok))
+    sql_close(opened.ok)
+    let stocked: bool = inventory_consume(product, u32(amount.milli), "dose", "dose:" + tank.handle)
+    journal_info("dose", tank.handle, "person", aqua_decimal(amount.milli) + " " + unit + " " + aqua_field(named, 0))
+    if !stocked {
+        return dosing_page_message(req, tank, i18n_t(req, "dosing.no_stock"))
+    }
+    return dosing_page_message(req, tank, i18n_t(req, "dosing.logged"))
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Livestock and plants                                                      */
+/* -------------------------------------------------------------------------- */
+
+const AQUA_KINDS: string = "fish|livestock.fish,invertebrate|livestock.invertebrate,coral|livestock.coral,plant|livestock.plant"
+
+fn livestock_page(req: Request) Response {
+    return livestock_page_message(req, aqua_tank_param(req), request_query_param(req, "msg"))
+}
+
+fn livestock_page_message(req: Request, tank: AquaTank, message: string) Response {
+    if tank.id == 0 {
+        return host_shell(req, i18n_t(req, "livestock.title"), "<p>" + i18n_t(req, "tank.none") + "</p>", "")
+    }
+    var rows: string = ""
+    var alive: u32 = 0
+    let opened: Result[SqlDb, string] = aqua_open()
+    if opened.is_ok {
+        let animals: AquariumLivestock[200]
+        let slice: Slice[AquariumLivestock] = Slice[AquariumLivestock]{ Ptr[AquariumLivestock](&animals[0]), 200 }
+        let listed: Result[u32, SqlError] = ListLivestock(i64(tank.id), opened.ok, slice, 200)
+        sql_close(opened.ok)
+        let offset: i64 = journal_offset()
+        if listed.is_ok {
+            var i: u32 = 0
+            while i < listed.ok {
+                let row: AquariumLivestock = animals[i]
+                let living: u32 = u32(row.count - row.lost)
+                if !rho_str_eq(row.kind, "plant") {
+                    alive = alive + living
+                }
+                var loss: string = ""
+                if living > 0 {
+                    loss = "<form method=\"post\" action=\"/livestock/loss\" class=\"inline\">" + forms_csrf_field() +
+                        "<input type=\"hidden\" name=\"id\" value=\"" + rho_int_to_str(u32(row.id)) + "\">" +
+                        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+                        "<button class=\"quiet\">" + i18n_t(req, "livestock.record_loss") + "</button></form>"
+                }
+                rows = rows + "<tr><td><b>" + escape_html(row.species) + "</b><br><small>" +
+                    escape_html(i18n_t(req, "livestock." + row.kind)) + "</small></td><td class=\"num\">" +
+                    rho_int_to_str(living) + "</td><td class=\"num\">" + rho_int_to_str(u32(row.lost)) + "</td><td>" +
+                    escape_html(rho_str_slice(journal_time(row.addedAt, offset), 0, 10)) + "</td><td>" +
+                    escape_html(row.notes) + "</td><td>" + loss + "</td></tr>\n"
+                i = i + 1
+            }
+        }
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"6\">" + i18n_t(req, "livestock.none") + "</td></tr>"
+    }
+    var kinds: string = ""
+    var rest: string = AQUA_KINDS
+    while rest != "" {
+        let at: i32 = rho_str_index_of(rest, ",")
+        var one: string = rest
+        if at < 0 {
+            rest = ""
+        } else {
+            one = rho_str_slice(rest, 0, u32(at))
+            rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
+        }
+        kinds = kinds + "<option value=\"" + aqua_field(one, 0) + "\">" + escape_html(i18n_t(req, aqua_field(one, 1))) + "</option>"
+    }
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "livestock.title") + "</h1><p>" + escape_html(tank.name) +
+        " · " + rho_int_to_str(alive) + " " + i18n_t(req, "livestock.animals") + "</p></div>" +
+        "<section class=\"rh-card wide\"><form method=\"post\" action=\"/livestock\" class=\"aq-form inline-form\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<label>" + i18n_t(req, "livestock.kind") + "<select name=\"kind\">" + kinds + "</select></label>" +
+        "<label>" + i18n_t(req, "livestock.species") + "<input name=\"species\" required placeholder=\"Paracheirodon innesi\"></label>" +
+        "<label>" + i18n_t(req, "livestock.count") + "<input name=\"count\" value=\"1\" inputmode=\"numeric\"></label>" +
+        "<label>" + i18n_t(req, "water.note") + "<input name=\"notes\"></label>" +
+        "<button class=\"primary\">" + i18n_t(req, "livestock.add") + "</button></form>" +
+        "<table><thead><tr><th>" + i18n_t(req, "livestock.species") + "</th><th>" + i18n_t(req, "livestock.count") +
+        "</th><th>" + i18n_t(req, "livestock.lost") + "</th><th>" + i18n_t(req, "livestock.added") + "</th><th>" +
+        i18n_t(req, "water.note") + "</th><th></th></tr></thead><tbody>" + rows + "</tbody></table></section>"
+    return host_shell(req, i18n_t(req, "livestock.title"), body, aqua_toast(message))
+}
+
+fn livestock_add(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return livestock_page_message(req, tank, i18n_t(req, "form.expired"))
+    }
+    let species: string = aqua_form(body, "species")
+    var count: u32 = rho_int_from_str(aqua_form(body, "count"))
+    if count == 0 {
+        count = 1
+    }
+    var kind: string = aqua_form(body, "kind")
+    if !rho_str_eq(kind, "invertebrate") && !rho_str_eq(kind, "coral") && !rho_str_eq(kind, "plant") {
+        kind = "fish"
+    }
+    if species == "" {
+        return livestock_page_message(req, tank, i18n_t(req, "livestock.need"))
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return livestock_page_message(req, tank, opened.err)
+    }
+    aqua_ignore(InsertLivestock(rho_int_to_str(tank.id), kind, species, rho_int_to_str(count),
+        rho_int_to_str(aqua_now()), aqua_form(body, "notes"), opened.ok))
+    sql_close(opened.ok)
+    journal_info("livestock", tank.handle, "person", rho_int_to_str(count) + " × " + species + " added")
+    return livestock_page_message(req, tank, i18n_t(req, "livestock.added_ok"))
+}
+
+fn livestock_loss(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return livestock_page_message(req, tank, i18n_t(req, "form.expired"))
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return livestock_page_message(req, tank, opened.err)
+    }
+    let id: u32 = rho_int_from_str(aqua_form(body, "id"))
+    let done: Result[u32, SqlError] = RecordLoss(i64(id), opened.ok)
+    sql_close(opened.ok)
+    if done.is_ok && done.ok > 0 {
+        journal_warning("livestock", tank.handle, "person", "a loss was recorded")
+    }
+    return livestock_page_message(req, tank, i18n_t(req, "livestock.loss_recorded"))
+}

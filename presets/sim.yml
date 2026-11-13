@@ -1,0 +1,52 @@
+# The aquarium's simulated devices: what Settings → Gateway → Simulator puts
+# behind the gateway when there is no mesh. Each device's sources follow a model
+# of the simulator module (robohub/modules/simulator).
+devices:
+  sim-filter-plug:
+    label: Filter plug
+    sources:
+      switch:
+        model: state
+        initial: on
+      power:
+        model: when
+        of: switch
+        on: 37
+        off: 0
+        noise: 1.5
+        unit: W
+  sim-heater-plug:
+    label: Heater plug
+    sources:
+      switch:
+        model: state
+        initial: off
+      power:
+        model: when
+        of: switch
+        on: 200
+        off: 0
+        noise: 3
+        unit: W
+  sim-light-relay:
+    label: Light relay
+    sources:
+      switch:
+        model: state
+        initial: off
+  sim-probe:
+    label: Water probe
+    sources:
+      temperature:
+        model: thermal
+        initial: 24.8
+        ambient: 22
+        heater: sim-heater-plug.switch
+        rate: 0.6
+        cool: 0.15
+        noise: 0.02
+        unit: °C
+      ph:
+        model: noise
+        base: 6.8
+        noise: 0.05

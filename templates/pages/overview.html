@@ -1,0 +1,26 @@
+<div class="aq-hero">
+  <h1>{{ tank }} · {{ volume }} L {{ kind }}</h1>
+  <p>{{ status }}</p>
+  <div class="readings">
+    {{{ r_temperature }}}
+    {{{ r_ph }}}
+    {{{ r_no3 }}}
+    <div class="reading"><div class="k">{{t "overview.power"}}</div><div class="v">{{ power }}<small>W</small></div><div class="s">{{t "overview.power_note"}}</div></div>
+  </div>
+</div>
+<div class="aq-cols">
+  <div class="aq-card">
+    <h2>{{t "nav.equipment"}} <a href="/equipment">{{t "overview.all_equipment"}}</a></h2>
+    {{{ equipment }}}
+  </div>
+  <div class="aq-card">
+    <h2>{{t "overview.temperature_24h"}} <a href="/water">{{t "overview.history"}}</a></h2>
+    {{{ chart }}}
+    <h2>{{t "overview.care"}} <a href="/scheduler">{{t "nav.schedule"}} →</a></h2>
+    {{{ care }}}
+  </div>
+</div>
+<div class="aq-card">
+  <h2>{{t "nav.journal"}} <a href="/journal">{{t "overview.all"}}</a></h2>
+  {{{ journal }}}
+</div>

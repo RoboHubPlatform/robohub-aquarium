@@ -1,0 +1,473 @@
+//
+// @file water.rho
+// @brief Water and chemistry: tests against each tank's targets, their history, and water changes.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+// A test is a reading of one parameter, by a kit (an inventory consumable that
+// one test uses up) or a sensor. Against the tank's target band it is in, low or
+// high; out of band is a journal warning, which is a notification and an open
+// entry until someone resolves it. The newest value of each parameter is
+// offered (appapi) under the tank's handle, so a rule can read `no3`.
+
+/* -------------------------------------------------------------------------- */
+/*  Recording                                                                 */
+/* -------------------------------------------------------------------------- */
+
+// aqua_record_test keeps one test, uses up its kit, says how it compares and
+// offers the value. It answers "" when kept, what went wrong otherwise.
+fn aqua_record_test(tank: AquaTank, parameter: string, milli: i64, kit: string, source: string,
+    note: string, actor: string) string {
+    if tank.id == 0 || aqua_parameter_line(parameter) == "" {
+        return "Choose a tank and a parameter."
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return opened.err
+    }
+    let now: u32 = aqua_now()
+    let kept: Result[u32, SqlError] = InsertTest(rho_int_to_str(tank.id), parameter, aqua_i64(milli),
+        rho_int_to_str(now), kit, source, note, opened.ok)
+    sql_close(opened.ok)
+    if !kept.is_ok {
+        return kept.err.message
+    }
+    if kit != "" && !inventory_consume(kit, 1000, "test " + parameter, "test:" + tank.handle) {
+        journal_warning("stock", kit, actor, "the test kit could not be taken off the inventory")
+    }
+    let label: string = aqua_parameter_label(parameter)
+    let unit: string = aqua_parameter_unit(parameter)
+    let band: AquaBand = aqua_band(tank.id, parameter)
+    let where: string = aqua_in_band(band, milli)
+    let reading: string = label + " " + aqua_decimal(milli) + " " + unit
+    if rho_str_eq(where, "high") {
+        journal_warning("test", tank.handle, actor, reading + ", above the " + aqua_decimal(band.high) + " target")
+    } else if rho_str_eq(where, "low") {
+        journal_warning("test", tank.handle, actor, reading + ", below the " + aqua_decimal(band.low) + " target")
+    } else {
+        journal_info("test", tank.handle, actor, reading)
+    }
+    aqua_publish(tank, parameter, milli)
+    return ""
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Reading                                                                   */
+/* -------------------------------------------------------------------------- */
+
+// aqua_tests_into lists a tank's tests since a time, newest first, into rows,
+// and answers how many.
+fn aqua_tests_into(tank_id: u32, since: u32, rows: Slice[AquariumTests]) u32 {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return 0
+    }
+    let listed: Result[u32, SqlError] = ListTests(i64(tank_id), rho_int_to_str(since), opened.ok, rows, AQUA_ROWS)
+    sql_close(opened.ok)
+    if listed.is_ok {
+        return listed.ok
+    }
+    return 0
+}
+
+// aqua_spark is a small line of a parameter's last tests, oldest on the left.
+fn aqua_spark(tests: AquariumTests[500], test_count: u32, parameter: string, tone: string) string {
+    var values: string = ""
+    var count: u32 = 0
+    var low: i64 = 0
+    var high: i64 = 0
+    var i: u32 = 0
+    while i < test_count && count < 12 {
+        if rho_str_eq(tests[i].parameter, parameter) {
+            let v: i64 = tests[i].valueMilli
+            if count == 0 || v < low {
+                low = v
+            }
+            if count == 0 || v > high {
+                high = v
+            }
+            values = aqua_decimal(v) + "\n" + values
+            count = count + 1
+        }
+        i = i + 1
+    }
+    if count < 2 {
+        return ""
+    }
+    var span: i64 = high - low
+    if span == 0 {
+        span = 1
+    }
+    var points: string = ""
+    var n: u32 = 0
+    var rest: string = values
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if line != "" {
+            let v: AquaNumber = aqua_number(line)
+            let x: u32 = (n * 90) / (count - 1)
+            let y: i64 = 18 - (v.milli - low) * 16 / span
+            points = points + rho_int_to_str(x) + "," + aqua_i64(y) + " "
+            n = n + 1
+        }
+    }
+    return "<svg class=\"spark\" width=\"90\" height=\"20\" viewBox=\"0 0 90 20\" aria-hidden=\"true\"><polyline fill=\"none\" stroke=\"var(--" +
+        tone + ")\" stroke-width=\"1.5\" points=\"" + points + "\"/></svg>"
+}
+
+// aqua_latest_rows is the Latest tab: each parameter's newest reading against
+// its band — a sensor's when the aquarium exports one, the newest test's
+// otherwise.
+fn aqua_latest_rows(req: Request, tank: AquaTank) string {
+    let tests: AquariumTests[500]
+    let test_count: u32 = aqua_tests_into(tank.id, 0, Slice[AquariumTests]{ Ptr[AquariumTests](&tests[0]), AQUA_ROWS })
+    let offset: i64 = journal_offset()
+    var out: string = ""
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        let key: string = aqua_field(line, 0)
+        if key == "" {
+            continue
+        }
+        let band: AquaBand = aqua_band(tank.id, key)
+        var value: string = ""
+        var taken: string = ""
+        var source: string = ""
+        var milli: i64 = 0
+        var i: u32 = 0
+        while i < test_count && value == "" {
+            if rho_str_eq(tests[i].parameter, key) {
+                milli = tests[i].valueMilli
+                value = aqua_decimal(milli)
+                taken = journal_time(tests[i].at, offset)
+                source = tests[i].kit
+                if source == "" {
+                    source = tests[i].source
+                }
+            }
+            i = i + 1
+        }
+        if rho_str_eq(key, "temperature") {
+            let live: string = appapi_value("water_temperature")
+            if live != "" {
+                value = aqua_round(live, 1)
+                milli = aqua_number(live).milli
+                taken = i18n_t(req, "water.live")
+                source = i18n_t(req, "water.sensor")
+            }
+        }
+        var css: string = ""
+        var tone: string = "teal"
+        let where: string = aqua_in_band(band, milli)
+        if value != "" && (rho_str_eq(where, "high") || rho_str_eq(where, "low")) {
+            css = " class=\"aq-out\""
+            tone = "warn"
+        } else if value != "" && rho_str_eq(where, "in") {
+            css = " class=\"aq-in\""
+        }
+        var shown: string = "—"
+        if value != "" {
+            shown = escape_html(value + " " + aqua_field(line, 2))
+        }
+        out = out + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td" + css + ">" + shown +
+            "</td><td>" + escape_html(aqua_band_text(band)) + "</td><td>" + escape_html(taken) + "</td><td>" +
+            escape_html(source) + "</td><td>" + aqua_spark(tests, test_count, key, tone) + "</td></tr>\n"
+    }
+    return "<table><thead><tr><th>" + i18n_t(req, "water.parameter") + "</th><th>" + i18n_t(req, "water.last") +
+        "</th><th>" + i18n_t(req, "water.target") + "</th><th>" + i18n_t(req, "water.taken") + "</th><th>" +
+        i18n_t(req, "water.source") + "</th><th>" + i18n_t(req, "water.trend") + "</th></tr></thead><tbody>" + out +
+        "</tbody></table>"
+}
+
+fn aqua_history_rows(req: Request, tank: AquaTank) string {
+    let tests: AquariumTests[500]
+    let test_count: u32 = aqua_tests_into(tank.id, 0, Slice[AquariumTests]{ Ptr[AquariumTests](&tests[0]), AQUA_ROWS })
+    let offset: i64 = journal_offset()
+    var out: string = ""
+    var i: u32 = 0
+    while i < test_count {
+        let row: AquariumTests = tests[i]
+        let band: AquaBand = aqua_band(tank.id, row.parameter)
+        let where: string = aqua_in_band(band, row.valueMilli)
+        var css: string = ""
+        if rho_str_eq(where, "high") || rho_str_eq(where, "low") {
+            css = " class=\"aq-out\""
+        }
+        out = out + "<tr><td><time>" + escape_html(journal_time(row.at, offset)) + "</time></td><td>" +
+            escape_html(aqua_parameter_label(row.parameter)) + "</td><td" + css + ">" +
+            escape_html(aqua_decimal(row.valueMilli) + " " + aqua_parameter_unit(row.parameter)) + "</td><td>" +
+            escape_html(row.kit) + "</td><td>" + escape_html(row.note) + "</td></tr>\n"
+        i = i + 1
+    }
+    if out == "" {
+        out = "<tr><td colspan=\"5\">" + i18n_t(req, "water.no_tests") + "</td></tr>"
+    }
+    return "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "water.parameter") +
+        "</th><th>" + i18n_t(req, "water.value") + "</th><th>" + i18n_t(req, "water.kit") + "</th><th>" +
+        i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + out + "</tbody></table>"
+}
+
+fn aqua_option_list(choices: string, selected: string, empty: string) string {
+    var out: string = "<option value=\"\">" + escape_html(empty) + "</option>"
+    var rest: string = choices
+    while rest != "" {
+        let at: i32 = rho_str_index_of(rest, ",")
+        var one: string = rest
+        if at < 0 {
+            rest = ""
+        } else {
+            one = rho_str_slice(rest, 0, u32(at))
+            rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
+        }
+        let value: string = aqua_field(one, 0)
+        if value != "" {
+            var mark: string = ""
+            if rho_str_eq(value, selected) {
+                mark = " selected"
+            }
+            out = out + "<option value=\"" + escape_html(value) + "\"" + mark + ">" + escape_html(aqua_field(one, 1)) + "</option>"
+        }
+    }
+    return out
+}
+
+// aqua_test_form is a form with a row per parameter: a value and the kit it
+// used up; the rows left empty are not tests.
+fn aqua_test_form(req: Request, tank: AquaTank) string {
+    let kits: string = inventory_choices("Test kits", "")
+    var rows: string = ""
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        let key: string = aqua_field(line, 0)
+        if key == "" {
+            continue
+        }
+        rows = rows + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td><input name=\"v_" + key +
+            "\" inputmode=\"decimal\" placeholder=\"" + escape_html(aqua_band_text(aqua_band(tank.id, key))) +
+            "\"> " + escape_html(aqua_field(line, 2)) + "</td><td><select name=\"k_" + key + "\">" +
+            aqua_option_list(kits, "", i18n_t(req, "water.no_kit")) + "</select></td></tr>\n"
+    }
+    return "<form method=\"post\" action=\"/water/test\" class=\"aq-form\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<table><thead><tr><th>" + i18n_t(req, "water.parameter") + "</th><th>" + i18n_t(req, "water.value") +
+        "</th><th>" + i18n_t(req, "water.kit_used") + "</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+        "<label>" + i18n_t(req, "water.note") + "<input name=\"note\"></label>" +
+        "<button class=\"primary\">" + i18n_t(req, "water.log") + "</button></form>"
+}
+
+fn aqua_targets_form(req: Request, tank: AquaTank) string {
+    var rows: string = ""
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        let key: string = aqua_field(line, 0)
+        if key == "" {
+            continue
+        }
+        let band: AquaBand = aqua_band(tank.id, key)
+        var low: string = ""
+        var high: string = ""
+        if band.known {
+            low = aqua_decimal(band.low)
+            high = aqua_decimal(band.high)
+        }
+        rows = rows + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td><input name=\"lo_" + key +
+            "\" value=\"" + escape_html(low) + "\" inputmode=\"decimal\"></td><td><input name=\"hi_" + key +
+            "\" value=\"" + escape_html(high) + "\" inputmode=\"decimal\"></td><td>" + escape_html(aqua_field(line, 2)) + "</td></tr>\n"
+    }
+    return "<form method=\"post\" action=\"/water/targets\" class=\"aq-form\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<p class=\"hint\">" + i18n_t(req, "water.targets_hint") + " " + escape_html(aqua_type_label(tank.kind)) + ".</p>" +
+        "<table><thead><tr><th>" + i18n_t(req, "water.parameter") + "</th><th>" + i18n_t(req, "water.low") +
+        "</th><th>" + i18n_t(req, "water.high") + "</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>" +
+        "<button class=\"primary\">" + i18n_t(req, "water.save_targets") + "</button></form>"
+}
+
+fn aqua_changes_tab(req: Request, tank: AquaTank) string {
+    let opened: Result[SqlDb, string] = aqua_open()
+    var rows: string = ""
+    if opened.is_ok {
+        let changes: AquariumWaterChanges[100]
+        let slice: Slice[AquariumWaterChanges] = Slice[AquariumWaterChanges]{ Ptr[AquariumWaterChanges](&changes[0]), 100 }
+        let listed: Result[u32, SqlError] = ListWaterChanges(i64(tank.id), opened.ok, slice, 100)
+        sql_close(opened.ok)
+        let offset: i64 = journal_offset()
+        if listed.is_ok {
+            var i: u32 = 0
+            while i < listed.ok {
+                let litres: u32 = (tank.volume * u32(changes[i].percent)) / 100
+                rows = rows + "<tr><td><time>" + escape_html(journal_time(changes[i].at, offset)) + "</time></td><td>" +
+                    rho_int_to_str(u32(changes[i].percent)) + " % · " + rho_int_to_str(litres) + " L</td><td>" +
+                    escape_html(changes[i].note) + "</td></tr>\n"
+                i = i + 1
+            }
+        }
+    }
+    if rows == "" {
+        rows = "<tr><td colspan=\"3\">" + i18n_t(req, "water.no_changes") + "</td></tr>"
+    }
+    return "<form method=\"post\" action=\"/water/change\" class=\"aq-form inline-form\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<label>" + i18n_t(req, "water.percent") + "<input name=\"percent\" value=\"30\" inputmode=\"numeric\"></label>" +
+        "<label>" + i18n_t(req, "water.note") + "<input name=\"note\"></label>" +
+        "<button class=\"primary\">" + i18n_t(req, "water.log_change") + "</button></form>" +
+        "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "water.amount") +
+        "</th><th>" + i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + rows + "</tbody></table>"
+}
+
+/* -------------------------------------------------------------------------- */
+/*  The page                                                                  */
+/* -------------------------------------------------------------------------- */
+
+fn aqua_tabs(req: Request, base: string, tabs: string, active: string, tank: AquaTank) string {
+    var out: string = "<nav class=\"rh-tabs\">"
+    var rest: string = tabs
+    while rest != "" {
+        let at: i32 = rho_str_index_of(rest, ",")
+        var one: string = rest
+        if at < 0 {
+            rest = ""
+        } else {
+            one = rho_str_slice(rest, 0, u32(at))
+            rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
+        }
+        var css: string = ""
+        if rho_str_eq(aqua_field(one, 0), active) {
+            css = " class=\"on\""
+        }
+        out = out + "<a" + css + " href=\"" + base + "?tab=" + aqua_field(one, 0) + "&tank=" +
+            rho_int_to_str(tank.id) + "\">" + escape_html(i18n_t(req, aqua_field(one, 1))) + "</a>"
+    }
+    return out + "</nav>"
+}
+
+fn water_page(req: Request) Response {
+    return water_page_message(req, aqua_tank_param(req), request_query_param(req, "tab"), request_query_param(req, "msg"))
+}
+
+fn water_page_message(req: Request, tank: AquaTank, asked: string, message: string) Response {
+    var tab: string = asked
+    if tab == "" {
+        tab = "latest"
+    }
+    var content: string = ""
+    if tank.id == 0 {
+        content = "<p>" + i18n_t(req, "tank.none") + "</p>"
+    } else if rho_str_eq(tab, "history") {
+        content = aqua_history_rows(req, tank)
+    } else if rho_str_eq(tab, "targets") {
+        content = aqua_targets_form(req, tank)
+    } else if rho_str_eq(tab, "log") {
+        content = aqua_test_form(req, tank)
+    } else if rho_str_eq(tab, "changes") {
+        content = aqua_changes_tab(req, tank)
+    } else {
+        content = aqua_latest_rows(req, tank)
+    }
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "water.title") + "</h1><p>" +
+        escape_html(tank.name) + " · " + i18n_t(req, "water.lede") + "</p></div>" +
+        aqua_tabs(req, "/water", "latest|water.tab.latest,history|water.tab.history,targets|water.tab.targets,log|water.tab.log,changes|water.tab.changes", tab, tank) +
+        "<section class=\"rh-card wide\">" + content + "</section>"
+    return host_shell(req, i18n_t(req, "water.title"), body, aqua_toast(message))
+}
+
+fn water_test(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) {
+        return water_page_message(req, tank, "log", i18n_t(req, "form.expired"))
+    }
+    let note: string = aqua_form(body, "note")
+    var kept: u32 = 0
+    var problem: string = ""
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let key: string = aqua_field(aqua_line(rest), 0)
+        rest = aqua_after_line(rest)
+        let text: string = aqua_form(body, "v_" + key)
+        if key != "" && text != "" {
+            let value: AquaNumber = aqua_number(text)
+            if !value.ok {
+                problem = aqua_parameter_label(key) + ": " + text + " is not a number"
+            } else {
+                let failed: string = aqua_record_test(tank, key, value.milli, aqua_form(body, "k_" + key), "manual",
+                    note, "person")
+                if failed != "" {
+                    problem = failed
+                } else {
+                    kept = kept + 1
+                }
+            }
+        }
+    }
+    if problem != "" {
+        return water_page_message(req, tank, "log", problem)
+    }
+    if kept == 0 {
+        return water_page_message(req, tank, "log", i18n_t(req, "water.nothing"))
+    }
+    return water_page_message(req, tank, "latest", rho_int_to_str(kept) + " " + i18n_t(req, "water.logged"))
+}
+
+fn water_targets(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return water_page_message(req, tank, "targets", i18n_t(req, "form.expired"))
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return water_page_message(req, tank, "targets", opened.err)
+    }
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let key: string = aqua_field(aqua_line(rest), 0)
+        rest = aqua_after_line(rest)
+        let low: AquaNumber = aqua_number(aqua_form(body, "lo_" + key))
+        let high: AquaNumber = aqua_number(aqua_form(body, "hi_" + key))
+        if key != "" && low.ok && high.ok && low.milli <= high.milli {
+            aqua_ignore(PutTarget(rho_int_to_str(tank.id), key, aqua_i64(low.milli), aqua_i64(high.milli), opened.ok))
+        }
+    }
+    sql_close(opened.ok)
+    journal_info("tank", tank.handle, "person", "targets changed")
+    return water_page_message(req, tank, "targets", i18n_t(req, "water.targets_saved"))
+}
+
+fn water_change(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) || tank.id == 0 {
+        return water_page_message(req, tank, "changes", i18n_t(req, "form.expired"))
+    }
+    let percent: u32 = rho_int_from_str(aqua_form(body, "percent"))
+    if percent == 0 || percent > 100 {
+        return water_page_message(req, tank, "changes", i18n_t(req, "water.percent_range"))
+    }
+    let note: string = aqua_form(body, "note")
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return water_page_message(req, tank, "changes", opened.err)
+    }
+    aqua_ignore(InsertWaterChange(rho_int_to_str(tank.id), rho_int_to_str(percent), rho_int_to_str(aqua_now()), note, opened.ok))
+    sql_close(opened.ok)
+    let litres: u32 = (tank.volume * percent) / 100
+    journal_info("water_change", tank.handle, "person", rho_int_to_str(percent) + " % (" + rho_int_to_str(litres) + " L)")
+    // The water change is the water-change chore done.
+    ignore_bool(scheduler_complete_title("Water change", rho_int_to_str(percent) + " %"))
+    return water_page_message(req, tank, "changes", i18n_t(req, "water.change_logged"))
+}

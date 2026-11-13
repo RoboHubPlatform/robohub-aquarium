@@ -1,0 +1,39 @@
+# The aquarium's rules and modes (robohub/modules/rules). A rule names items by
+# their handles; until an item with that handle is bound, the rule reads nothing
+# and does nothing, and says so on the Rules page.
+rules:
+  keep-temperature:
+    when: heater.temperature < 24.5
+    clear: heater.temperature > 25.5
+    do: switch heater on
+    else: switch heater off
+  too-warm:
+    when: heater.temperature > 28
+    for: 2m
+    cooldown: 30m
+    do: switch heater off; alert error "the water is above 28 °C"
+  lights:
+    when: time between 10:00 and 20:00
+    do: switch light on
+    else: switch light off
+  co2-follows-light:
+    when: light.switch == on
+    do: switch co2 on
+    else: switch co2 off
+  filter-stopped:
+    when: filter-main.switch == on and filter-main.power < 5
+    for: 60s
+    cooldown: 30m
+    do: alert warning "the filter draws no power"
+modes:
+  feeding:
+    title: Feeding
+    for: 10m
+    do: switch filter-main off
+    end: switch filter-main on
+    suspends: filter-stopped
+  maintenance:
+    title: Maintenance
+    do: switch filter-main off; switch heater off
+    end: switch filter-main on
+    suspends: keep-temperature, too-warm, filter-stopped

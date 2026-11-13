@@ -1,0 +1,63 @@
+//
+// @file migrate.rho
+// @brief What an aquarium of 0.4 or earlier kept, moved to where 0.5 keeps it, once.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+// Before 0.5 the aquarium kept its own events (system_events), equipment
+// (devices), rules (automation_rules), modes and water tests. The journal, the
+// inventory and the rules module keep those now. The events are copied into the
+// journal once; the other tables were never used for anything that ran, are
+// empty on every installation we know of, and are left as they were. The
+// widgets' Mesh URLs move to stable ids by themselves (widgets 0.3).
+
+fn aqua_migrate() void {
+    if settings_get("aquarium.migrated", "") == "0.5" {
+        return
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return
+    }
+    let db: SqlDb = opened.ok
+    let rows: SystemEvents[500]
+    let slice: Slice[SystemEvents] = Slice[SystemEvents]{ Ptr[SystemEvents](&rows[0]), 500 }
+    let listed: Result[u32, SqlError] = ListLegacyEvents(db, slice, 500)
+    var copied: u32 = 0
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok {
+            var level: string = "info"
+            if rho_str_eq(rows[i].severity, "WARN") || rho_str_eq(rows[i].severity, "WARNING") {
+                level = "warning"
+            } else if rho_str_eq(rows[i].severity, "ERROR") {
+                level = "error"
+            }
+            let kept: Result[u32, SqlError] = InsertJournalEntry(rho_int_to_str(u32(rows[i].createdEpoch)), level,
+                rows[i].kind, "", "system", rows[i].message, db)
+            if kept.is_ok {
+                copied = copied + 1
+            }
+            i = i + 1
+        }
+    }
+    sql_close(db)
+    settings_set("aquarium.migrated", "0.5")
+    if copied > 0 {
+        info("aquarium", rho_int_to_str(copied) + " events of the aquarium's own moved to the journal")
+        // A moved event is history, not something still to resolve.
+        let again: Result[SqlDb, string] = aqua_open()
+        if again.is_ok {
+            aqua_ignore(ResolveAllJournal(again.ok))
+            sql_close(again.ok)
+        }
+    }
+}

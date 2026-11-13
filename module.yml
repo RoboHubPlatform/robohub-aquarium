@@ -11,18 +11,23 @@ module:
   previous_ids:
     - robohub.applications.aquarium
   type: rho
-  version: 0.4.0
+  version: 0.5.0
   kind: keeper-hosted
   title: Aquarium
   description: >
-    The RoboHub aquarium controller: water chemistry, equipment, schedules and
-    the inventory of what keeps them running.
+    The RoboHub aquarium: tanks and their target bands, water tests and
+    changes, dosing and livestock, on the shared RoboHub modules — the inventory
+    and its equipment's automation, the schedule, rules and modes, the journal,
+    the dashboard and the API the aquarium offers — with devices reached only
+    through the gateway, from Mesh or the simulator.
   route: /
   port: "8480"
   command: aquarium
   maintainer: "Aurel Miron"
   license: "MIT"
   created: "2026-11-02"
+
+platform: robohub
 
 main: src/main.rho
 
@@ -48,6 +53,15 @@ modules:
   - name: widgets
     route: /widgets
     enabled: true
+  - name: journal
+    route: /journal
+    enabled: true
+  - name: rules
+    route: /rules
+    enabled: true
+  - name: appapi
+    route: /api/v1
+    enabled: true
 
 # The plugins this application uses: how it signs a person in. Mesh is reached
 # through the gateway interface, bound below.
@@ -59,9 +73,9 @@ plugins:
       mode: direct
       login_url: "http://127.0.0.1:19090/auth/login"
 
-# The application has a database, so the SQL port is generated for it. The
-# tables it uses are the module's; the host's own schema may grow with the
-# aquarium domain.
+# The application has a database, so the SQL port is generated for it. Its own
+# files hold the aquarium's tables only: the inventory, scheduler and widgets
+# modules declare theirs, and rho-sql (0.2) generates them in first.
 requires:
   - name: rho/sqlite
 
@@ -77,17 +91,24 @@ deps:
   rho-sql: ">=0.1.0"
   robohub:
     htmx: ">=0.1.0"
+    ui: ">=0.1.0"
     i18n: ">=0.1.0"
     settings: ">=0.1.0"
     forms: ">=0.1.0"
     notifications: ">=0.1.0"
     logging: ">=0.1.0"
-    inventory: ">=0.1.0"
-    scheduler: ">=0.1.0"
-    widgets: ">=0.1.0"
+    inventory: ">=0.2.0"
+    scheduler: ">=0.2.0"
+    widgets: ">=0.2.6"
+    journal: ">=0.1.0"
+    rules: ">=0.1.0"
+    appapi: ">=0.1.0"
+    simulator: ">=0.1.0"
     robohub-auth: ">=0.1.0"
-    robohub-gateway: ">=1.0.0"
-    robohub-provider-mesh: ">=0.3.0"
+    robohub-gateway: ">=1.1.0"
+    robohub-provider-mesh: ">=0.4.0"
+    robohub-bus: ">=0.2.0"
+    robohub-provider-mqtt: ">=0.2.0"
 
 # The gateway this application reaches the mesh through, and its settings. The
 # Settings page changes them on a running installation (bind.conf in the
@@ -96,10 +117,27 @@ bind:
   robohub.gateway:
     providers:
       - robohub-provider-mesh
+      - simulator
     config:
       robohub-provider-mesh:
         url: "http://127.0.0.1:8478"
         project: "default"
+        # auto: Mesh's feed over the broker when the installation has one,
+        # its HTTP stream otherwise. bus or http force one of them.
+        transport: auto
+      # The simulated devices of presets/sim.yml; Settings → Gateway turns the
+      # mesh off and this on when there is no mesh to read.
+      simulator:
+        enabled: "false"
+  robohub.bus:
+    providers:
+      - robohub-provider-mqtt
+
+# What the broker user the keeper makes for this application may do: read the
+# live feed Mesh relays for a project.
+bus:
+  publish: []
+  subscribe: [mesh/+/telemetry]
 
 deploy:
   port: 8480
@@ -117,4 +155,14 @@ docs:
 
 # The application's own documentation page, embedded at build time.
 assets:
+  - presets
   - docs/index.md
+
+# What the aquarium needs from the machine.
+system_deps:
+  executables:
+    - name: curl
+      description: Mesh and the devices are asked with it
+      install:
+        apt: curl
+        brew: curl

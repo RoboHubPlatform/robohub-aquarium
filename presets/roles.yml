@@ -1,0 +1,26 @@
+# The roles the aquarium's rules and pages name, and what each needs from the
+# mesh: the aquarium's side of its contract with the gateway. A role is filled on
+# the Devices page by an inventory item (of the category named here) whose
+# capabilities are bound to gateway sources; a trailing ? marks one that may
+# stay unbound.
+roles:
+  heater:
+    label: Heater
+    category: Heaters
+    capabilities: switch, temperature?, power?
+    hint: kept between the temperature targets by the keep-temperature rule; the temperature is the tank's probe
+  light:
+    label: Light
+    category: Lighting
+    capabilities: switch, power?
+    hint: on and off with the lights rule, between the tank's light hours
+  filter-main:
+    label: Main filter
+    category: Filters
+    capabilities: switch, power?
+    hint: off while feeding; watched by the filter-stopped rule, which needs its power
+  co2:
+    label: CO2
+    category: CO2
+    capabilities: switch
+    hint: follows the light

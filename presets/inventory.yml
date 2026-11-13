@@ -1,0 +1,55 @@
+# The aquarium's inventory categories (robohub/modules/inventory). An equipment
+# category lists the capabilities an item in it can be bound to; a trailing ?
+# marks one that may stay unbound. The handles the rules use — heater, light,
+# filter-main, co2 — are given to items when they are added.
+categories:
+  food:
+    name: Food
+    kind: consumable
+  fertilisers:
+    name: Fertilisers
+    kind: consumable
+  water-care:
+    name: Water care
+    kind: consumable
+  test-kits:
+    name: Test kits
+    kind: consumable
+  medication:
+    name: Medication
+    kind: consumable
+  filter-media:
+    name: Filter media
+    kind: part
+  spares:
+    name: Spares
+    kind: part
+  filters:
+    name: Filters
+    kind: equipment
+    capabilities: switch, power?
+  heaters:
+    name: Heaters
+    kind: equipment
+    capabilities: switch, temperature?, power?
+  lighting:
+    name: Lighting
+    kind: equipment
+    capabilities: switch, power?
+  co2:
+    name: CO2
+    kind: equipment
+    capabilities: switch
+  pumps:
+    name: Pumps
+    kind: equipment
+    capabilities: switch, power?
+  sensors:
+    name: Sensors
+    kind: equipment
+    capabilities: temperature?, ph?
+  feeders:
+    name: Feeders
+    kind: equipment
+    capabilities: press
+    uses: Food

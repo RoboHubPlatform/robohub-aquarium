@@ -10,7 +10,7 @@ targets:
       - name: auth
         options:
           issuer: keeper
-          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/api/aquarium/mesh/events,/docs"
+          skip_paths: "/healthz,/auth/login,/assets,/assets/,/i18n,/auth/callback,/static,/ui,/docs"
     default_locale: en
     locales:
       - locale: en

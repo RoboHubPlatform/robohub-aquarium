@@ -1,135 +1,82 @@
-<!doctype html>
-<html lang="{{ locale }}">
+<!DOCTYPE html>
+<html lang="{{ locale }}" data-theme="{{ theme }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{{{ ui_head }}}
 {{{ htmx }}}
-<meta http-equiv="Cache-Control" content="no-store">
-<title>{{ title }} · RoboHub Aquarium</title>
-<style>
-  :root {
-    --ink: #f4efe4; --muted: #c7c0b2; --faint: #a9a294;
-    --gold: #e4b866; --teal: #79c7bd; --panel: rgba(18, 24, 25, .66);
-    --line: rgba(244, 239, 228, .18); --glass: rgba(15, 20, 21, .58);
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --serif: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { min-height: 100%; }
-  body {
-    margin: 0; color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55;
-    background:
-      linear-gradient(180deg, rgba(5, 11, 15, .55) 0%, rgba(5, 13, 17, .28) 38%, rgba(4, 10, 13, .72) 100%),
-      url("/static/aquarium-background.jpg") center / cover fixed no-repeat,
-      radial-gradient(1200px 700px at 50% 10%, #2d5c63 0%, #0a1418 70%);
-  }
-  a { color: var(--gold); text-decoration: none; }
-  a:hover { color: #f3d59a; }
-  .topbar, .bottombar {
-    position: fixed; left: 0; right: 0; z-index: 20; display: flex; align-items: center;
-    justify-content: space-between; gap: 1rem; padding: .7rem 1.6rem;
-    background: linear-gradient(180deg, rgba(7, 14, 17, .82), rgba(7, 14, 17, .52));
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--line);
-  }
-  .topbar { top: 0; }
-  .bottombar { bottom: 0; border-top: 1px solid var(--line); border-bottom: 0; font-size: .78rem; color: var(--muted); }
-  .brand { font-family: var(--serif); font-size: 1.05rem; letter-spacing: .04em; }
-  .brand em { color: var(--teal); font-style: normal; }
-  nav { display: flex; align-items: center; gap: 1rem; font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; }
-  nav a { color: var(--muted); }
-  nav a.active, nav a:hover { color: var(--gold); }
-  .bottombar nav a { text-transform: none; letter-spacing: 0; }
-  main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 6.2rem 1.6rem 6rem; }
-  h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: .01em; margin: 0 0 .4rem; text-shadow: 0 2px 20px rgba(0,0,0,.5); }
-  h2 { font-family: var(--serif); font-weight: 500; font-size: 1.25rem; margin: 0 0 .4rem; }
-  p { color: var(--muted); margin: .3rem 0 .9rem; max-width: 62ch; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1.6rem; }
-  .card {
-    padding: 1.2rem 1.25rem; border: 1px solid var(--line); border-radius: 14px;
-    background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 18px 50px rgba(0,0,0,.28);
-  }
-  .card h2 { color: var(--ink); }
-  .card p { font-size: .86rem; margin-bottom: 1rem; }
-  .card a { font-size: .84rem; letter-spacing: .03em; text-transform: uppercase; }
-  .dash-title { font-family: var(--serif); font-weight: 500; font-size: 1.25rem; margin: 1.8rem 0 .6rem; }
-  .panel-form { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; backdrop-filter: blur(12px); }
-  .keeper[data-keeper-port] { color: var(--teal); }
-  footer .keeper { color: var(--teal); }
-}
+<title>{{ title }} — RoboHub Aquarium</title>
 {{{ forms_style }}}
-{{{ notifications }}}
-</style>
 {{{ widgets_style }}}
-</head>
-<body>
-<header class="topbar">
-  <div class="brand">RoboHub <em>Aquarium</em></div>
-  <nav>
-    <a href="/">{{t "nav.home"}}</a>
-    <a href="/expenses">{{t "nav.inventory"}}</a>
-    <a href="/scheduler">{{t "nav.scheduler"}}</a>
-    <a href="/widgets">{{t "nav.widgets"}}</a>
-    <a href="/equipment">{{t "nav.equipment"}}</a>
-    <a href="/automation">{{t "nav.automation"}}</a>
-    <a href="/chemistry">{{t "nav.chemistry"}}</a>
-    <a href="/modes">{{t "nav.modes"}}</a>
-    <a href="/events">{{t "nav.events"}}</a>
-    <a href="/settings">{{t "nav.settings"}}</a>
-    {{{ locale_switch }}}
-    {{{ keeper }}}
-  </nav>
-</header>
-<main>{{{ body }}}</main>
-{{{ notifications }}}
-<footer class="bottombar">
-  <span id="status-inventory">Items: —</span>
-  <span id="status-scheduler">Tasks: —</span>
-  <span id="status-widgets"></span>
-  <nav>
-    <a href="/expenses">{{t "nav.inventory"}}</a>
-    <a href="/scheduler">{{t "nav.scheduler"}}</a>
-    <a href="/widgets">{{t "nav.widgets"}}</a>
-    <a href="/docs">{{t "nav.docs"}}</a>
-    {{{ keeper }}}
-  </nav>
-</footer>
-<script>
-(function () {
-  document.querySelectorAll(".keeper[data-keeper-port]").forEach(function (el) {
-    var port = el.getAttribute("data-keeper-port");
-    if (port) {
-      el.href = location.protocol + "//" + location.hostname + ":" + port + "/";
-    }
-  });
-  document.querySelectorAll(".local-time[data-s]").forEach(function (el) {
-    var seconds = Number(el.getAttribute("data-s"));
-    if (seconds > 0) { el.textContent = new Date(seconds * 1000).toLocaleString(); }
-  });
-  // status bar: inventory count, scheduler tasks, pinned widgets
-  function updateStatusBar() {
-    fetch("/api/expenses/count").then(function (r) { return r.json(); }).then(function (d) {
-      var el = document.getElementById("status-inventory");
-      if (el) { el.textContent = "Items: " + (d.count || 0); }
-    }).catch(function () {});
-    fetch("/api/scheduler/chores").then(function (r) { return r.json(); }).then(function (items) {
-      var el = document.getElementById("status-scheduler");
-      if (el) { el.textContent = "Tasks: " + (Array.isArray(items) ? items.length : 0); }
-    }).catch(function () {});
-    fetch("/api/widgets").then(function (r) { return r.json(); }).then(function (items) {
-      var pinned = items.filter(function (w) { return w.pinned === 1; });
-      var el = document.getElementById("status-widgets");
-      if (el) {
-        el.textContent = pinned.map(function (w) { return w.title + ": " + (w.latest || "") + " " + (w.unit || ""); }).join(" · ");
-      }
-    }).catch(function () {});
+<style>
+  /* What only the aquarium's pages have; the look itself is robohub.ui's. */
+  .rh-main { padding: 1.1rem 1.3rem 2rem; display: grid; gap: 1rem; align-content: start; min-width: 0; }
+  .ph h1 { margin: 0; }
+  .ph p { margin: .2rem 0 0; }
+  .rh-card.wide { display: block; }
+  .aq-chip { display: inline-flex; align-items: center; gap: .4rem; font: 600 .72rem/1 var(--sans); padding: .32rem .6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .aq-chip::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: var(--teal); }
+  .aq-chip.mode::before { background: var(--gold); }
+  form.inline { display: inline-flex; margin: 0; }
+  .aq-hero { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); padding: 1.3rem 1.4rem; display: grid; gap: .25rem;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--surface) 94%, transparent) 0%, color-mix(in srgb, var(--surface) 72%, transparent) 45%, color-mix(in srgb, var(--surface) 20%, transparent) 100%), url("/static/aquarium-background.jpg") center / cover; }
+  .aq-hero h1 { margin: 0; }
+  .aq-hero p { margin: 0; max-width: 60ch; }
+  .readings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin-top: .8rem; max-width: 46rem; }
+  .reading { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: .6rem .75rem; }
+  .reading .k { font-size: .68rem; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
+  .reading .v { font: 500 1.45rem/1.2 var(--serif); color: var(--gold); }
+  .reading .v small { font: .74rem var(--sans); color: var(--muted); margin-left: .2rem; }
+  .reading .s { font-size: .72rem; color: var(--teal); }
+  .reading .s.w { color: var(--warn); }
+  .aq-cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; }
+  .aq-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: .9rem 1rem; display: grid; gap: .5rem; align-content: start; min-width: 0; }
+  .aq-card h2 { font-size: 1.02rem; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+  .aq-card h2 a { font: 600 .74rem var(--sans); }
+  .row { display: grid; grid-template-columns: 1fr auto auto; gap: .6rem; align-items: center; padding: .45rem 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row .t { font-weight: 600; }
+  .row .d { font-size: .76rem; color: var(--faint); }
+  .badge { font: 700 .6rem/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; padding: .25rem .4rem; border-radius: 5px; background: var(--wash); color: var(--muted); border: 1px solid var(--line); }
+  .badge.auto { color: var(--teal); border-color: var(--teal); background: var(--teal-soft); }
+  .badge.due { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .badge.low { color: var(--stop); border-color: var(--stop); background: var(--stop-soft); }
+  .rh button.sw { width: 2.4rem; height: 1.35rem; min-height: 0; border-radius: 999px; background: var(--line-strong); color: transparent; position: relative; border: 0; box-shadow: none; cursor: pointer; padding: 0; }
+  .rh button.sw::after { content: ""; position: absolute; top: .2rem; left: .2rem; width: .95rem; height: .95rem; border-radius: 50%; background: var(--faint); transition: left .15s; }
+  .rh button.sw.on { background: var(--teal-soft); box-shadow: inset 0 0 0 1px var(--teal); }
+  .rh button.sw.on::after { left: 1.25rem; background: var(--teal); }
+  svg.chart { width: 100%; height: 90px; display: block; }
+  .rh svg.spark { width: 90px; height: 20px; display: inline-block; }
+  .note, .hint { font-size: .78rem; color: var(--faint); }
+  .ev { display: grid; grid-template-columns: 3.2rem 1fr; gap: .5rem; font-size: .84rem; padding: .3rem 0; border-top: 1px solid var(--line); }
+  .ev:first-of-type { border-top: 0; }
+  .ev time { color: var(--faint); font-family: var(--mono); font-size: .76rem; }
+  .ev .warning { color: var(--warn); } .ev .error { color: var(--stop); }
+  td.aq-in { color: var(--teal); } td.aq-out { color: var(--warn); font-weight: 600; }
+  td.num, .num { text-align: right; white-space: nowrap; }
+  .aq-form { display: grid; gap: .6rem; }
+  .aq-form.inline-form { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); align-items: end; margin-bottom: 1rem; }
+  .aq-form.grid-form { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: end; }
+  .aq-form label { display: grid; gap: .2rem; font-size: .76rem; color: var(--faint); }
+  .aq-form label.check { display: flex; align-items: center; gap: .4rem; }
+  tr.sel td { background: var(--gold-soft); }
+  .aq-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; }
+  .aq-roles h2 span { display: inline-flex; gap: .4rem; align-items: center; }
+  pre.docs { white-space: pre-wrap; font-size: .84rem; }
+  @media (max-width: 860px) {
+    .aq-cols { grid-template-columns: 1fr; }
+    .readings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rh-top .aq-chip.ok, .rh-top form.inline { display: none; }
+    .rh-main { padding: .8rem .8rem 4.5rem; }
   }
-  updateStatusBar();
-  setInterval(updateStatusBar, 5000);
-})();
-</script>
-
-
+</style>
+</head>
+<body class="rh">
+{{{ topbar }}}
+<div class="rh-shell">
+  <nav class="rh-rail">{{{ nav }}}</nav>
+  <main class="rh-main">{{{ body }}}</main>
+</div>
+{{{ notifications }}}
 </body>
 </html>

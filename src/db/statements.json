@@ -2,8 +2,238 @@
   "package": "queries",
   "statements": [
     {
+      "name": "sql_list_appapi_values",
+      "sql": "SELECT id, value, unit, label, kind, updated_at FROM appapi_values ORDER BY id",
+      "result": "AppapiValues",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value",
+          "column": "value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "label",
+          "column": "label",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updatedAt",
+          "column": "updated_at",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_put_appapi_value",
+      "sql": "INSERT OR REPLACE INTO appapi_values (id, value, unit, label, kind, updated_at)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "label",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "updated_at",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_add_appapi_point",
+      "sql": "INSERT INTO appapi_history (id, at, value) VALUES (?1, ?2, ?3)",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_appapi_points",
+      "sql": "SELECT at, value FROM appapi_history\nWHERE id = ?1 AND at \u003e= ?2 AND at \u003c= ?3\nORDER BY at\nLIMIT 5000",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "since",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "until",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "ListAppapiPointsRow",
+      "fields": [
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "value",
+          "column": "value",
+          "goType": "float64",
+          "float": true
+        }
+      ]
+    },
+    {
+      "name": "sql_prune_appapi_points",
+      "sql": "DELETE FROM appapi_history WHERE at \u003c ?1",
+      "parameters": [
+        {
+          "name": "before",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_appapi_derived",
+      "sql": "SELECT id, source, fn, window_s, unit, label FROM appapi_derived ORDER BY id",
+      "result": "AppapiDerived",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "column": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "fnValue",
+          "column": "fn",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "windowS",
+          "column": "window_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "label",
+          "column": "label",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_put_appapi_derived",
+      "sql": "INSERT OR REPLACE INTO appapi_derived (id, source, fn, window_s, unit, label)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "fnValue",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "window_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "label",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
       "name": "sql_insert_category",
-      "sql": "INSERT INTO categories (name) VALUES (?)",
+      "sql": "INSERT INTO categories (name) VALUES (?1)",
       "parameters": [
         {
           "name": "name",
@@ -15,7 +245,7 @@
     },
     {
       "name": "sql_list_categories",
-      "sql": "SELECT id, name FROM categories ORDER BY name",
+      "sql": "SELECT id, name, kind, capabilities, uses FROM categories ORDER BY name",
       "result": "Categories",
       "fields": [
         {
@@ -29,12 +259,84 @@
           "column": "name",
           "goType": "string",
           "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "capabilities",
+          "column": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "column": "uses",
+          "goType": "string",
+          "text": true
         }
       ]
     },
     {
+      "name": "sql_seed_category",
+      "sql": "INSERT OR IGNORE INTO categories (name, kind, capabilities, uses)\nVALUES (?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_category_preset",
+      "sql": "UPDATE categories SET kind = ?1, capabilities = ?2, uses = ?3\nWHERE name = ?4",
+      "parameters": [
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
       "name": "sql_insert_item",
-      "sql": "INSERT INTO items (name, category_id, unit, quantity_milli, reorder_milli,\n                   location, notes)\nVALUES (?, NULLIF(?, ''), ?, ?,\n        ?, ?, ?)",
+      "sql": "INSERT INTO items (name, category_id, unit, quantity_milli, reorder_milli,\n                   location, notes, kind, handle)\nVALUES (?1, NULLIF(?2, ''), ?3, ?4,\n        ?5, ?6, ?7, ?8, ?9)",
       "parameters": [
         {
           "name": "name",
@@ -70,13 +372,23 @@
           "name": "notes",
           "goType": "string",
           "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
         }
       ],
       "affected": true
     },
     {
       "name": "sql_list_items",
-      "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nORDER BY i.name",
+      "sql": "SELECT i.id, i.name, COALESCE(c.name, '') AS category, i.category_id, i.unit,\n       i.quantity_milli, i.reorder_milli, COALESCE(i.location, '') AS location,\n       COALESCE(i.notes, '') AS notes, i.kind, i.handle, i.runtime_s, i.runtime_at,\n       i.portion_milli, COALESCE(c.capabilities, '') AS capabilities,\n       COALESCE(c.uses, '') AS uses\nFROM items i\nLEFT JOIN categories c ON c.id = i.category_id\nORDER BY i.name",
       "result": "ListItemsRow",
       "fields": [
         {
@@ -132,12 +444,54 @@
           "column": "notes",
           "goType": "string",
           "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "column": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "runtimeS",
+          "column": "runtime_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "runtimeAt",
+          "column": "runtime_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "portionMilli",
+          "column": "portion_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capabilities",
+          "column": "capabilities",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "uses",
+          "column": "uses",
+          "goType": "string",
+          "text": true
         }
       ]
     },
     {
       "name": "sql_update_item_details",
-      "sql": "UPDATE items\nSET name = ?, category_id = NULLIF(?, ''), unit = ?,\n    reorder_milli = ?, location = ?, notes = ?\nWHERE id = ?",
+      "sql": "UPDATE items\nSET name = ?1, category_id = NULLIF(?2, ''), unit = ?3,\n    reorder_milli = ?4, location = ?5, notes = ?6,\n    kind = ?7, handle = ?8, portion_milli = ?9\nWHERE id = ?10",
       "parameters": [
         {
           "name": "name",
@@ -170,6 +524,43 @@
           "text": true
         },
         {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "portion_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_set_item_runtime",
+      "sql": "UPDATE items SET runtime_s = ?1, runtime_at = ?2 WHERE id = ?3",
+      "parameters": [
+        {
+          "name": "runtime_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "runtime_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
           "name": "id",
           "goType": "int64",
           "integer": true
@@ -179,7 +570,7 @@
     },
     {
       "name": "sql_update_item_stock",
-      "sql": "UPDATE items SET quantity_milli = quantity_milli + ? WHERE id = ?",
+      "sql": "UPDATE items SET quantity_milli = quantity_milli + ?1 WHERE id = ?2",
       "parameters": [
         {
           "name": "delta",
@@ -196,7 +587,7 @@
     },
     {
       "name": "sql_insert_expense",
-      "sql": "INSERT INTO expenses\n    (item_id, item, category_id, quantity_milli, unit_price_cents, total_cents,\n     source, purchased_at, comment)\nVALUES\n    (NULLIF(?, ''), ?, NULLIF(?, ''), ?,\n     ?, ?, ?, ?, ?)",
+      "sql": "INSERT INTO expenses\n    (item_id, item, category_id, quantity_milli, unit_price_cents, total_cents,\n     source, purchased_at, comment)\nVALUES\n    (NULLIF(?1, ''), ?2, NULLIF(?3, ''), ?4,\n     ?5, ?6, ?7, ?8, ?9)",
       "parameters": [
         {
           "name": "item_id",
@@ -309,7 +700,7 @@
     },
     {
       "name": "sql_delete_expense",
-      "sql": "DELETE FROM expenses WHERE id = ?",
+      "sql": "DELETE FROM expenses WHERE id = ?1",
       "parameters": [
         {
           "name": "id",
@@ -334,7 +725,7 @@
     },
     {
       "name": "sql_insert_movement",
-      "sql": "INSERT INTO stock_movements\n    (item_id, kind, quantity_milli, unit_price_cents, total_cents, source,\n     occurred_at, comment)\nVALUES\n    (?, ?, ?, ?, ?, ?,\n     ?, ?)",
+      "sql": "INSERT INTO stock_movements\n    (item_id, kind, quantity_milli, unit_price_cents, total_cents, source,\n     occurred_at, comment)\nVALUES\n    (?1, ?2, ?3, ?4, ?5, ?6,\n     ?7, ?8)",
       "parameters": [
         {
           "name": "item_id",
@@ -423,8 +814,834 @@
       ]
     },
     {
+      "name": "sql_list_bindings",
+      "sql": "SELECT b.item_id, b.capability, b.source, b.access, b.bound_at, i.handle, i.name\nFROM item_bindings b\nJOIN items i ON i.id = b.item_id\nORDER BY i.name, b.capability",
+      "result": "ListBindingsRow",
+      "fields": [
+        {
+          "name": "itemId",
+          "column": "item_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capability",
+          "column": "capability",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "column": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "access",
+          "column": "access",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "boundAt",
+          "column": "bound_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "column": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_bind_capability",
+      "sql": "INSERT OR REPLACE INTO item_bindings (item_id, capability, source, access)\nVALUES (?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "capability",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "access",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_unbind_capability",
+      "sql": "DELETE FROM item_bindings WHERE item_id = ?1 AND capability = ?2",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "capability",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_set_item_handle",
+      "sql": "UPDATE items SET handle = ?1 WHERE id = ?2",
+      "parameters": [
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_clear_item_handle",
+      "sql": "UPDATE items SET handle = '' WHERE handle = ?1 AND id \u003c\u003e ?2",
+      "parameters": [
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_journal_entry",
+      "sql": "INSERT INTO journal_entries (at, level, kind, subject, actor, message)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+      "parameters": [
+        {
+          "name": "at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "level",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "subject",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "actor",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_journal_entries",
+      "sql": "SELECT id, at, level, kind, subject, actor, message, resolved_at\nFROM journal_entries\nWHERE at \u003e= ?1\n  AND (?2 = '' OR level = ?2)\n  AND (?3 = '' OR kind = ?3)\nORDER BY at DESC, id DESC\nLIMIT 500",
+      "parameters": [
+        {
+          "name": "since",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "level",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "JournalEntries",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "level",
+          "column": "level",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "subject",
+          "column": "subject",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "actor",
+          "column": "actor",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "column": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "resolvedAt",
+          "column": "resolved_at",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_list_open_journal_entries",
+      "sql": "SELECT id, at, level, kind, subject, actor, message, resolved_at\nFROM journal_entries\nWHERE resolved_at = 0 AND level \u003c\u003e 'info'\nORDER BY at DESC, id DESC\nLIMIT 500",
+      "result": "JournalEntries",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "level",
+          "column": "level",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "subject",
+          "column": "subject",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "actor",
+          "column": "actor",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "column": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "resolvedAt",
+          "column": "resolved_at",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_resolve_journal_entry",
+      "sql": "UPDATE journal_entries SET resolved_at = ?1 WHERE id = ?2 AND resolved_at = 0",
+      "parameters": [
+        {
+          "name": "resolved_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_prune_journal_entries",
+      "sql": "DELETE FROM journal_entries WHERE at \u003c ?1 AND (resolved_at \u003e 0 OR level = 'info')",
+      "parameters": [
+        {
+          "name": "before",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_last_journal_entry",
+      "sql": "SELECT id, at, level, kind, subject, actor, message, resolved_at\nFROM journal_entries\nWHERE kind = ?1 AND (?2 = '' OR subject = ?2)\nORDER BY at DESC, id DESC\nLIMIT 1",
+      "parameters": [
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "subject",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "JournalEntries",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "level",
+          "column": "level",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "subject",
+          "column": "subject",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "actor",
+          "column": "actor",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "column": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "resolvedAt",
+          "column": "resolved_at",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_list_rules_all",
+      "sql": "SELECT id, name, enabled, when_expr, clear_expr, for_s, cooldown_s, do_actions,\n       else_actions, origin, state, state_since, last_fired, last_error\nFROM rules ORDER BY name",
+      "result": "Rules",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "column": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "whenExpr",
+          "column": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clearExpr",
+          "column": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "forS",
+          "column": "for_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "cooldownS",
+          "column": "cooldown_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "doActions",
+          "column": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "elseActions",
+          "column": "else_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "origin",
+          "column": "origin",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "state",
+          "column": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "stateSince",
+          "column": "state_since",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lastFired",
+          "column": "last_fired",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lastError",
+          "column": "last_error",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_seed_rule",
+      "sql": "INSERT OR IGNORE INTO rules (name, when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, origin)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "for_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "cooldown_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "else_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "origin",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_preset_rule",
+      "sql": "UPDATE rules SET when_expr = ?1, clear_expr = ?2, for_s = ?3,\n    cooldown_s = ?4, do_actions = ?5, else_actions = ?6\nWHERE name = ?7 AND origin = 'preset'",
+      "parameters": [
+        {
+          "name": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "for_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "cooldown_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "else_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_set_rule_state",
+      "sql": "UPDATE rules SET state = ?1, state_since = ?2, last_fired = ?3,\n    last_error = ?4\nWHERE id = ?5",
+      "parameters": [
+        {
+          "name": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "state_since",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "last_fired",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "last_error",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_set_rule_enabled",
+      "sql": "UPDATE rules SET enabled = ?1 WHERE id = ?2",
+      "parameters": [
+        {
+          "name": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_person_rule",
+      "sql": "DELETE FROM rules WHERE id = ?1 AND origin = 'person'",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_rule_modes",
+      "sql": "SELECT id, name, title, duration_s, do_actions, end_actions, suspends, origin\nFROM rule_modes ORDER BY name",
+      "result": "RuleModes",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "title",
+          "column": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "durationS",
+          "column": "duration_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "doActions",
+          "column": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "endActions",
+          "column": "end_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "suspends",
+          "column": "suspends",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "origin",
+          "column": "origin",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_seed_rule_mode",
+      "sql": "INSERT OR IGNORE INTO rule_modes (name, title, duration_s, do_actions, end_actions, suspends, origin)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, 'preset')",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "duration_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "end_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "suspends",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_preset_mode",
+      "sql": "UPDATE rule_modes SET title = ?1, duration_s = ?2, do_actions = ?3,\n    end_actions = ?4, suspends = ?5\nWHERE name = ?6 AND origin = 'preset'",
+      "parameters": [
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "duration_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "end_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "suspends",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_get_active_mode",
+      "sql": "SELECT id, name, started_at, ends_at, actor FROM rule_mode_active WHERE id = 1",
+      "result": "RuleModeActive",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "startedAt",
+          "column": "started_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "endsAt",
+          "column": "ends_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "actor",
+          "column": "actor",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_set_active_mode",
+      "sql": "INSERT OR REPLACE INTO rule_mode_active (id, name, started_at, ends_at, actor)\nVALUES (1, ?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "started_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "ends_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "actor",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_clear_active_mode",
+      "sql": "DELETE FROM rule_mode_active WHERE id = 1",
+      "affected": true
+    },
+    {
       "name": "sql_insert_chore",
-      "sql": "INSERT INTO chores\n    (title, description, schedule_kind, schedule_value, interval_hours,\n     usage_interval_hours, grace_hours, priority, next_due_epoch, enabled)\nVALUES\n    (?, ?, ?, ?, ?,\n     ?, ?, ?, ?, ?)",
+      "sql": "INSERT INTO chores\n    (title, description, schedule_kind, schedule_value, interval_hours,\n     usage_interval_hours, grace_hours, priority, next_due_epoch, enabled)\nVALUES\n    (?1, ?2, ?3, ?4, ?5,\n     ?6, ?7, ?8, ?9, ?10)",
       "parameters": [
         {
           "name": "title",
@@ -481,7 +1698,7 @@
     },
     {
       "name": "sql_list_chores",
-      "sql": "SELECT id, title, COALESCE(description, '') AS description, schedule_kind,\n       COALESCE(schedule_value, '') AS schedule_value, interval_hours,\n       usage_interval_hours, usage_accum_seconds, grace_hours, priority,\n       enabled, next_due_epoch, snoozed_until_epoch, last_completed_epoch,\n       created_at\nFROM chores\nORDER BY enabled DESC, next_due_epoch, title",
+      "sql": "SELECT id, title, COALESCE(description, '') AS description, schedule_kind,\n       COALESCE(schedule_value, '') AS schedule_value, interval_hours,\n       usage_interval_hours, usage_accum_seconds, grace_hours, priority,\n       enabled, next_due_epoch, snoozed_until_epoch, last_completed_epoch,\n       created_at, runtime_of, runtime_seen, consumes, consumes_milli\nFROM chores\nORDER BY enabled DESC, next_due_epoch, title",
       "result": "Chores",
       "fields": [
         {
@@ -573,12 +1790,36 @@
           "column": "created_at",
           "goType": "string",
           "text": true
+        },
+        {
+          "name": "runtimeOf",
+          "column": "runtime_of",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "runtimeSeen",
+          "column": "runtime_seen",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "consumes",
+          "column": "consumes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "consumesMilli",
+          "column": "consumes_milli",
+          "goType": "int64",
+          "integer": true
         }
       ]
     },
     {
       "name": "sql_complete_chore",
-      "sql": "UPDATE chores\nSET next_due_epoch = ?,\n    last_completed_epoch = ?,\n    snoozed_until_epoch = 0,\n    usage_accum_seconds = ?\nWHERE id = ?",
+      "sql": "UPDATE chores\nSET next_due_epoch = ?1,\n    last_completed_epoch = ?2,\n    snoozed_until_epoch = 0,\n    usage_accum_seconds = ?3\nWHERE id = ?4",
       "parameters": [
         {
           "name": "next_due_epoch",
@@ -605,7 +1846,7 @@
     },
     {
       "name": "sql_insert_completion",
-      "sql": "INSERT INTO chore_completions (chore_id, completed_epoch, note)\nVALUES (?, ?, ?)",
+      "sql": "INSERT INTO chore_completions (chore_id, completed_epoch, note)\nVALUES (?1, ?2, ?3)",
       "parameters": [
         {
           "name": "chore_id",
@@ -627,7 +1868,7 @@
     },
     {
       "name": "sql_snooze_chore",
-      "sql": "UPDATE chores SET snoozed_until_epoch = ? WHERE id = ?",
+      "sql": "UPDATE chores SET snoozed_until_epoch = ?1 WHERE id = ?2",
       "parameters": [
         {
           "name": "snoozed_until_epoch",
@@ -644,7 +1885,7 @@
     },
     {
       "name": "sql_add_usage",
-      "sql": "UPDATE chores\nSET usage_accum_seconds = usage_accum_seconds + ?\nWHERE id = ?",
+      "sql": "UPDATE chores\nSET usage_accum_seconds = usage_accum_seconds + ?1\nWHERE id = ?2",
       "parameters": [
         {
           "name": "delta_seconds",
@@ -697,31 +1938,26 @@
       ]
     },
     {
-      "name": "sql_insert_device",
-      "sql": "INSERT INTO devices (name, kind, state, last_value, updated_epoch)\nVALUES (?, ?, ?, ?, ?)",
+      "name": "sql_set_chore_links",
+      "sql": "UPDATE chores SET runtime_of = ?1, consumes = ?2, consumes_milli = ?3\nWHERE id = (SELECT MAX(id) FROM chores WHERE title = ?4)",
       "parameters": [
         {
-          "name": "name",
+          "name": "runtime_of",
           "goType": "string",
           "text": true
         },
         {
-          "name": "kind",
+          "name": "consumes",
           "goType": "string",
           "text": true
         },
         {
-          "name": "state",
-          "goType": "string",
-          "text": true
+          "name": "consumes_milli",
+          "goType": "int64",
+          "integer": true
         },
         {
-          "name": "last_value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "updated_epoch",
+          "name": "title",
           "goType": "string",
           "text": true
         }
@@ -729,59 +1965,11 @@
       "affected": true
     },
     {
-      "name": "sql_list_devices",
-      "sql": "SELECT id, name, kind, state, COALESCE(last_value, '') AS last_value, updated_epoch\nFROM devices ORDER BY name",
-      "result": "Devices",
-      "fields": [
-        {
-          "name": "id",
-          "column": "id",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "name",
-          "column": "name",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "kind",
-          "column": "kind",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "state",
-          "column": "state",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "lastValue",
-          "column": "last_value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "updatedEpoch",
-          "column": "updated_epoch",
-          "goType": "int64",
-          "integer": true
-        }
-      ]
-    },
-    {
-      "name": "sql_update_device_state",
-      "sql": "UPDATE devices SET state = ?, updated_epoch = ? WHERE id = ?",
+      "name": "sql_set_chore_runtime_seen",
+      "sql": "UPDATE chores SET runtime_seen = ?1 WHERE id = ?2",
       "parameters": [
         {
-          "name": "state",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "updated_epoch",
+          "name": "runtime_seen",
           "goType": "int64",
           "integer": true
         },
@@ -794,368 +1982,60 @@
       "affected": true
     },
     {
-      "name": "sql_update_device_value",
-      "sql": "UPDATE devices SET last_value = ?, updated_epoch = ?\nWHERE id = ?",
+      "name": "sql_seed_chore",
+      "sql": "INSERT INTO chores\n    (title, description, schedule_kind, schedule_value, interval_hours,\n     usage_interval_hours, grace_hours, priority, next_due_epoch, enabled)\nSELECT ?1, ?2, ?3, ?4, ?5,\n       ?6, ?7, ?8, ?9, 1\nWHERE NOT EXISTS (SELECT 1 FROM chores WHERE title = ?1)",
       "parameters": [
         {
-          "name": "last_value",
+          "name": "title",
           "goType": "string",
           "text": true
         },
         {
-          "name": "updated_epoch",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "id",
-          "goType": "int64",
-          "integer": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_insert_rule",
-      "sql": "INSERT INTO automation_rules\n    (name, kind, metric, operator, threshold, action, enabled, state, last_value,\n     updated_epoch)\nVALUES\n    (?, ?, ?, ?, ?, ?, ?, 'normal', 0,\n     ?)",
-      "parameters": [
-        {
-          "name": "name",
+          "name": "description",
           "goType": "string",
           "text": true
         },
         {
-          "name": "kind",
+          "name": "schedule_kind",
           "goType": "string",
           "text": true
         },
         {
-          "name": "metric",
+          "name": "schedule_value",
           "goType": "string",
           "text": true
         },
         {
-          "name": "operator",
+          "name": "interval_hours",
           "goType": "string",
           "text": true
         },
         {
-          "name": "threshold",
+          "name": "usage_interval_hours",
           "goType": "string",
           "text": true
         },
         {
-          "name": "action",
+          "name": "grace_hours",
           "goType": "string",
           "text": true
         },
         {
-          "name": "enabled",
+          "name": "priority",
           "goType": "string",
           "text": true
         },
         {
-          "name": "updated_epoch",
+          "name": "next_due_epoch",
           "goType": "string",
           "text": true
         }
       ],
       "affected": true
-    },
-    {
-      "name": "sql_list_rules",
-      "sql": "SELECT id, name, kind, metric, operator, threshold, action, enabled, state,\n       last_value, updated_epoch\nFROM automation_rules ORDER BY kind, name",
-      "result": "AutomationRules",
-      "fields": [
-        {
-          "name": "id",
-          "column": "id",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "name",
-          "column": "name",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "kind",
-          "column": "kind",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "metric",
-          "column": "metric",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "operator",
-          "column": "operator",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "threshold",
-          "column": "threshold",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "action",
-          "column": "action",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "enabled",
-          "column": "enabled",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "state",
-          "column": "state",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "lastValue",
-          "column": "last_value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "updatedEpoch",
-          "column": "updated_epoch",
-          "goType": "int64",
-          "integer": true
-        }
-      ]
-    },
-    {
-      "name": "sql_update_rule",
-      "sql": "UPDATE automation_rules\nSET enabled = ?, state = ?, last_value = ?,\n    updated_epoch = ?\nWHERE id = ?",
-      "parameters": [
-        {
-          "name": "enabled",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "state",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "last_value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "updated_epoch",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "id",
-          "goType": "int64",
-          "integer": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_insert_test",
-      "sql": "INSERT INTO water_tests (parameter, value, unit, tested_at, note)\nVALUES (?, ?, ?, ?, ?)",
-      "parameters": [
-        {
-          "name": "parameter",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "unit",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "tested_at",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "note",
-          "goType": "string",
-          "text": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_list_tests",
-      "sql": "SELECT id, parameter, value, unit, tested_at, COALESCE(note, '') AS note\nFROM water_tests ORDER BY tested_at DESC, id DESC LIMIT 200",
-      "result": "WaterTests",
-      "fields": [
-        {
-          "name": "id",
-          "column": "id",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "parameter",
-          "column": "parameter",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "value",
-          "column": "value",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "unit",
-          "column": "unit",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "testedAt",
-          "column": "tested_at",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "note",
-          "column": "note",
-          "goType": "string",
-          "text": true
-        }
-      ]
-    },
-    {
-      "name": "sql_set_mode",
-      "sql": "INSERT INTO aquarium_modes (name, active_until_epoch, note)\nVALUES (?, ?, ?)\nON CONFLICT(name) DO UPDATE SET\n    active_until_epoch = excluded.active_until_epoch,\n    note = excluded.note",
-      "parameters": [
-        {
-          "name": "name",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "active_until_epoch",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "note",
-          "goType": "string",
-          "text": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_get_modes",
-      "sql": "SELECT name, active_until_epoch, COALESCE(note, '') AS note\nFROM aquarium_modes ORDER BY name",
-      "result": "AquariumModes",
-      "fields": [
-        {
-          "name": "name",
-          "column": "name",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "activeUntilEpoch",
-          "column": "active_until_epoch",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "note",
-          "column": "note",
-          "goType": "string",
-          "text": true
-        }
-      ]
-    },
-    {
-      "name": "sql_insert_event",
-      "sql": "INSERT INTO system_events (severity, kind, message, created_epoch)\nVALUES (?, ?, ?, ?)",
-      "parameters": [
-        {
-          "name": "severity",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "kind",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "message",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "created_epoch",
-          "goType": "string",
-          "text": true
-        }
-      ],
-      "affected": true
-    },
-    {
-      "name": "sql_list_events",
-      "sql": "SELECT id, severity, kind, message, created_epoch\nFROM system_events ORDER BY created_epoch DESC, id DESC LIMIT 200",
-      "result": "SystemEvents",
-      "fields": [
-        {
-          "name": "id",
-          "column": "id",
-          "goType": "int64",
-          "integer": true
-        },
-        {
-          "name": "severity",
-          "column": "severity",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "kind",
-          "column": "kind",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "message",
-          "column": "message",
-          "goType": "string",
-          "text": true
-        },
-        {
-          "name": "createdEpoch",
-          "column": "created_epoch",
-          "goType": "int64",
-          "integer": true
-        }
-      ]
     },
     {
       "name": "sql_insert_widget",
-      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
       "parameters": [
         {
           "name": "title",
@@ -1302,7 +2182,7 @@
     },
     {
       "name": "sql_update_widget",
-      "sql": "UPDATE widgets SET title = ?, kind = ?, source_kind = ?,\n    source = ?, method = ?, unit = ?, points = ?, decimals = ? WHERE id = ?",
+      "sql": "UPDATE widgets SET title = ?1, kind = ?2, source_kind = ?3,\n    source = ?4, method = ?5, unit = ?6, points = ?7, decimals = ?8 WHERE id = ?9",
       "parameters": [
         {
           "name": "title",
@@ -1354,7 +2234,7 @@
     },
     {
       "name": "sql_move_widget",
-      "sql": "UPDATE widgets SET position = ? WHERE id = ?",
+      "sql": "UPDATE widgets SET position = ?1 WHERE id = ?2",
       "parameters": [
         {
           "name": "position",
@@ -1371,7 +2251,7 @@
     },
     {
       "name": "sql_resize_widget",
-      "sql": "UPDATE widgets SET size = ? WHERE id = ?",
+      "sql": "UPDATE widgets SET size = ?1 WHERE id = ?2",
       "parameters": [
         {
           "name": "size",
@@ -1388,7 +2268,7 @@
     },
     {
       "name": "sql_pin_widget",
-      "sql": "UPDATE widgets SET pinned = ? WHERE id = ?",
+      "sql": "UPDATE widgets SET pinned = ?1 WHERE id = ?2",
       "parameters": [
         {
           "name": "pinned",
@@ -1405,7 +2285,7 @@
     },
     {
       "name": "sql_delete_widget",
-      "sql": "DELETE FROM widgets WHERE id = ?",
+      "sql": "DELETE FROM widgets WHERE id = ?1",
       "parameters": [
         {
           "name": "id",
@@ -1417,7 +2297,7 @@
     },
     {
       "name": "sql_insert_widget_value",
-      "sql": "INSERT INTO widget_values (widget_id, value_text, value_milli, recorded_epoch)\nVALUES (?, ?, ?, ?)",
+      "sql": "INSERT INTO widget_values (widget_id, value_text, value_milli, recorded_epoch)\nVALUES (?1, ?2, ?3, ?4)",
       "parameters": [
         {
           "name": "widget_id",
@@ -1444,7 +2324,7 @@
     },
     {
       "name": "sql_list_widget_values",
-      "sql": "SELECT * FROM widget_values WHERE widget_id = ?\nORDER BY recorded_epoch DESC, id DESC LIMIT 100",
+      "sql": "SELECT * FROM widget_values WHERE widget_id = ?1\nORDER BY recorded_epoch DESC, id DESC LIMIT 100",
       "parameters": [
         {
           "name": "widget_id",
@@ -1488,7 +2368,7 @@
     },
     {
       "name": "sql_latest_widget_value",
-      "sql": "SELECT id, widget_id, value_text, value_milli, recorded_epoch\nFROM widget_values WHERE widget_id = ?\nORDER BY recorded_epoch DESC, id DESC LIMIT 1",
+      "sql": "SELECT id, widget_id, value_text, value_milli, recorded_epoch\nFROM widget_values WHERE widget_id = ?1\nORDER BY recorded_epoch DESC, id DESC LIMIT 1",
       "parameters": [
         {
           "name": "widget_id",
@@ -1529,6 +2409,696 @@
           "integer": true
         }
       ]
+    },
+    {
+      "name": "sql_update_widget_source_only",
+      "sql": "UPDATE widgets SET source_kind = ?1, source = ?2 WHERE id = ?3",
+      "parameters": [
+        {
+          "name": "source_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_tanks",
+      "sql": "SELECT id, name, handle, volume_l, type, lights_on, lights_off, notes, created_at\nFROM aquarium_tanks ORDER BY id",
+      "result": "AquariumTanks",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "column": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "volumeL",
+          "column": "volume_l",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "typeValue",
+          "column": "type",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lightsOn",
+          "column": "lights_on",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lightsOff",
+          "column": "lights_off",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "column": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "createdAt",
+          "column": "created_at",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_tank",
+      "sql": "INSERT INTO aquarium_tanks (name, handle, volume_l, type, lights_on, lights_off, notes, created_at)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "handle",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "volume_l",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "typeValue",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lights_on",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lights_off",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "created_at",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_update_tank",
+      "sql": "UPDATE aquarium_tanks SET name = ?1, volume_l = ?2, type = ?3,\n    lights_on = ?4, lights_off = ?5, notes = ?6\nWHERE id = ?7",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "volume_l",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "typeValue",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lights_on",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lights_off",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_targets",
+      "sql": "SELECT tank_id, parameter, low_milli, high_milli FROM aquarium_targets\nWHERE tank_id = ?1 ORDER BY parameter",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "AquariumTargets",
+      "fields": [
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "parameter",
+          "column": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "lowMilli",
+          "column": "low_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "highMilli",
+          "column": "high_milli",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_put_target",
+      "sql": "INSERT OR REPLACE INTO aquarium_targets (tank_id, parameter, low_milli, high_milli)\nVALUES (?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "low_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "high_milli",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_seed_target",
+      "sql": "INSERT OR IGNORE INTO aquarium_targets (tank_id, parameter, low_milli, high_milli)\nVALUES (?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "low_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "high_milli",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_insert_test",
+      "sql": "INSERT INTO aquarium_tests (tank_id, parameter, value_milli, at, kit, source, note)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "value_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_tests",
+      "sql": "SELECT id, tank_id, parameter, value_milli, at, kit, source, note\nFROM aquarium_tests WHERE tank_id = ?1 AND at \u003e= ?2\nORDER BY at DESC, id DESC LIMIT 500",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "since",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "result": "AquariumTests",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "parameter",
+          "column": "parameter",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "valueMilli",
+          "column": "value_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "kit",
+          "column": "kit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "source",
+          "column": "source",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_dose",
+      "sql": "INSERT INTO aquarium_doses (tank_id, product, amount_milli, unit, at, note)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "product",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "amount_milli",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_doses",
+      "sql": "SELECT id, tank_id, product, amount_milli, unit, at, note\nFROM aquarium_doses WHERE tank_id = ?1 ORDER BY at DESC, id DESC LIMIT 200",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "AquariumDoses",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "product",
+          "column": "product",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "amountMilli",
+          "column": "amount_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_water_change",
+      "sql": "INSERT INTO aquarium_water_changes (tank_id, percent, at, note)\nVALUES (?1, ?2, ?3, ?4)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "percent",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "note",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_water_changes",
+      "sql": "SELECT id, tank_id, percent, at, note\nFROM aquarium_water_changes WHERE tank_id = ?1 ORDER BY at DESC, id DESC LIMIT 100",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "AquariumWaterChanges",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "percent",
+          "column": "percent",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_insert_livestock",
+      "sql": "INSERT INTO aquarium_livestock (tank_id, kind, species, count, added_at, notes)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "species",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "count",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "added_at",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "notes",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_livestock",
+      "sql": "SELECT id, tank_id, kind, species, count, lost, added_at, notes\nFROM aquarium_livestock WHERE tank_id = ?1 ORDER BY kind, species",
+      "parameters": [
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "AquariumLivestock",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "species",
+          "column": "species",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "count",
+          "column": "count",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lost",
+          "column": "lost",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "addedAt",
+          "column": "added_at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "notes",
+          "column": "notes",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_record_loss",
+      "sql": "UPDATE aquarium_livestock SET lost = lost + 1 WHERE id = ?1 AND count \u003e lost",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_list_legacy_events",
+      "sql": "SELECT id, severity, kind, message, created_epoch FROM system_events ORDER BY id",
+      "result": "SystemEvents",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "severity",
+          "column": "severity",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "kind",
+          "column": "kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "message",
+          "column": "message",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "createdEpoch",
+          "column": "created_epoch",
+          "goType": "int64",
+          "integer": true
+        }
+      ]
+    },
+    {
+      "name": "sql_resolve_all_journal",
+      "sql": "UPDATE journal_entries SET resolved_at = at WHERE resolved_at = 0 AND actor = 'system' AND subject = ''",
+      "affected": true
     }
   ]
 }

@@ -1,0 +1,189 @@
+//
+// @file devices.rho
+// @brief The aquarium's roles — heater, light, main filter, CO₂ — filled by inventory items bound to mesh sources.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+// The rules and the overview name equipment by role (`heater.temperature`,
+// `switch light on`). presets/roles.yml says which roles there are and what each
+// needs from the mesh; this page fills them, the way a widget is given its
+// source: which inventory item plays the role, and which gateway source each of
+// its capabilities is. Nothing here knows a Mesh address: the sources are the
+// ones the gateway lists, by their stable ids.
+
+fn aqua_roles_path() string {
+    return aqua_presets_path("roles")
+}
+
+fn aqua_role(key: string, field: string) string {
+    return aqua_trim(yaml.value(aqua_roles_path(), "roles." + key + "." + field))
+}
+
+// aqua_role_item is the item that plays a role: the one with its handle.
+fn aqua_role_item(items: ListItemsRow[512], count: u32, handle: string) i32 {
+    return inventory_find_handle(items, count, handle)
+}
+
+fn devices_page(req: Request) Response {
+    return devices_page_message(req, request_query_param(req, "msg"))
+}
+
+fn devices_page_message(req: Request, message: string) Response {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return host_shell(req, i18n_t(req, "devices.title"), "<p>" + escape_html(opened.err) + "</p>", "")
+    }
+    let db: SqlDb = opened.ok
+    let items: ListItemsRow[512]
+    let item_slice: Slice[ListItemsRow] = Slice[ListItemsRow]{ Ptr[ListItemsRow](&items[0]), 512 }
+    let listed: Result[u32, SqlError] = ListItems(db, item_slice, 512)
+    let bindings: ListBindingsRow[512]
+    let binding_slice: Slice[ListBindingsRow] = Slice[ListBindingsRow]{ Ptr[ListBindingsRow](&bindings[0]), 512 }
+    let bound: Result[u32, SqlError] = ListBindings(db, binding_slice, 512)
+    sql_close(db)
+    var item_count: u32 = 0
+    if listed.is_ok {
+        item_count = listed.ok
+    }
+    var binding_count: u32 = 0
+    if bound.is_ok {
+        binding_count = bound.ok
+    }
+    var cards: string = ""
+    var rest: string = yaml.keys(aqua_roles_path(), "roles")
+    while rest != "" {
+        let role: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if role == "" {
+            continue
+        }
+        let label: string = aqua_role(role, "label")
+        let at: i32 = aqua_role_item(items, item_count, role)
+        var item_id: i64 = 0
+        var item_choice: string = ""
+        var state: string = "<span class=\"badge low\">" + i18n_t(req, "devices.unfilled") + "</span>"
+        if at >= 0 {
+            let row: u32 = u32(at)
+            item_id = items[row].id
+            item_choice = rho_int_to_str(u32(item_id))
+            if inventory_connected(items[row], bindings, binding_count) {
+                state = "<span class=\"badge auto\">" + i18n_t(req, "inventory.connected") + "</span>"
+            } else {
+                state = "<span class=\"badge due\">" + i18n_t(req, "inventory.not_connected") + "</span>"
+            }
+        }
+        // The items that could play it: equipment, its own category first.
+        var options: string = "<option value=\"new\">" + escape_html(i18n_t(req, "devices.new_item") + " " + label) + "</option>"
+        var i: u32 = 0
+        while i < item_count {
+            if rho_str_eq(items[i].kind, "equipment") {
+                let id: string = rho_int_to_str(u32(items[i].id))
+                var mark: string = ""
+                if rho_str_eq(id, item_choice) {
+                    mark = " selected"
+                }
+                var note: string = items[i].category
+                if items[i].handle != "" && !rho_str_eq(items[i].handle, role) {
+                    note = note + " · " + i18n_t(req, "devices.now") + " " + items[i].handle
+                }
+                options = options + "<option value=\"" + id + "\"" + mark + ">" + escape_html(items[i].name + " (" + note + ")") + "</option>"
+            }
+            i = i + 1
+        }
+        var rows: string = ""
+        var caps: string = inventory_capability_list(aqua_role(role, "capabilities"))
+        while caps != "" {
+            let capability: string = aqua_line(caps)
+            caps = aqua_after_line(caps)
+            if capability == "" {
+                continue
+            }
+            let name: string = inventory_capability_name(capability)
+            let source: string = inventory_binding_source(bindings, binding_count, item_id, name)
+            var now: string = "—"
+            if source != "" {
+                let value: string = gateway.source_latest(source)
+                if value != "" {
+                    now = value
+                }
+            }
+            var need: string = i18n_t(req, "inventory.required")
+            if inventory_capability_optional(capability) {
+                need = i18n_t(req, "inventory.optional")
+            }
+            rows = rows + "<tr><td><b>" + escape_html(name) + "</b> <small>" + escape_html(need) + "</small></td><td><select name=\"src_" +
+                escape_html(name) + "\">" + inventory_source_options(capability, source, bindings, binding_count, item_id) +
+                "</select></td><td class=\"num\">" + escape_html(now) + "</td></tr>"
+        }
+        cards = cards + "<section class=\"aq-card\"><h2>" + escape_html(label) + " <span><code>" + escape_html(role) + "</code> " + state +
+            "</span></h2><p class=\"hint\">" + escape_html(aqua_role(role, "hint")) + "</p>" +
+            "<form method=\"post\" action=\"/devices\" class=\"aq-form\">" + forms_csrf_field() +
+            "<input type=\"hidden\" name=\"role\" value=\"" + escape_html(role) + "\">" +
+            "<label>" + i18n_t(req, "devices.item") + "<select name=\"item\">" + options + "</select></label>" +
+            "<table><thead><tr><th>" + i18n_t(req, "inventory.capability") + "</th><th>" + i18n_t(req, "inventory.gateway_source") +
+            "</th><th>" + i18n_t(req, "inventory.now") + "</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+            "<div><button class=\"primary\">" + i18n_t(req, "devices.save") + "</button></div></form></section>"
+    }
+    var notice: string = ""
+    if !inventory_automated() {
+        notice = "<p class=\"notice\">" + i18n_t(req, "inventory.no_gateway") + "</p>"
+    }
+    let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "devices.title") + "</h1><p>" + i18n_t(req, "devices.lede") + "</p></div>" +
+        notice + "<div class=\"aq-roles\">" + cards + "</div>"
+    return host_shell(req, i18n_t(req, "devices.title"), body, aqua_toast(message))
+}
+
+fn devices_save(req: Request) Response {
+    let body: string = request_body(req)
+    if !forms_csrf_ok(body) {
+        return devices_page_message(req, i18n_t(req, "form.expired"))
+    }
+    let role: string = aqua_form(body, "role")
+    let label: string = aqua_role(role, "label")
+    if label == "" {
+        return devices_page_message(req, i18n_t(req, "devices.unknown"))
+    }
+    var id: u32 = 0
+    let chosen: string = aqua_form(body, "item")
+    if rho_str_eq(chosen, "new") || chosen == "" {
+        let existing: u32 = inventory_item_id(role)
+        if existing > 0 {
+            id = existing
+        } else {
+            id = inventory_add_equipment(label, aqua_role(role, "category"), role)
+        }
+    } else {
+        id = rho_int_from_str(chosen)
+        if !inventory_assign_handle(id, role) {
+            return devices_page_message(req, i18n_t(req, "devices.no_item"))
+        }
+    }
+    if id == 0 {
+        return devices_page_message(req, i18n_t(req, "devices.no_item"))
+    }
+    var problem: string = ""
+    var caps: string = inventory_capability_list(aqua_role(role, "capabilities"))
+    while caps != "" {
+        let capability: string = aqua_line(caps)
+        caps = aqua_after_line(caps)
+        if capability != "" {
+            let failed: string = inventory_bind(id, capability, aqua_form(body, "src_" + inventory_capability_name(capability)))
+            if failed != "" && problem == "" {
+                problem = failed
+            }
+        }
+    }
+    journal_info("device", role, "person", label + " mapped")
+    if problem != "" {
+        return devices_page_message(req, problem)
+    }
+    return devices_page_message(req, label + ": " + i18n_t(req, "devices.saved"))
+}

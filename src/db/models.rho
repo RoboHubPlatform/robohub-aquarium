@@ -18,10 +18,38 @@ import std.core.result
 import std.core.slice
 import std.sql
 
-// The categories an item or a purchase can belong to.
+// A value the application offers. kind is derived (from its presets), published (computed by the application) or export (a reading it passes on). updated_at is Unix seconds.
+struct AppapiValues {
+    id: string
+    value: string
+    unit: string
+    label: string
+    kind: string
+    updatedAt: i64
+}
+
+struct ListAppapiPointsRow {
+    at: i64
+    value: f64
+}
+
+// How a value is derived, from the application's presets. source is what it is derived from (an inventory item's capability, `heater.temperature`, or a journal kind for `since`); fn is latest, avg, min, max, integral, since or export; window_s is the window avg/min/max/integral look over.
+struct AppapiDerived {
+    id: string
+    source: string
+    fnValue: string
+    windowS: i64
+    unit: string
+    label: string
+}
+
+// The categories an item or a purchase can belong to. An application seeds its own from its presets. kind is what an item in it is by default: consumable (used up: food, fertiliser), part (fitted and replaced: filter media) or equipment (installed, and possibly automated). capabilities are what an equipment item in it can be bound to — `switch, power?` — a trailing ? marks one that may stay unbound. uses names a category whose items it consumes (a feeder uses food).
 struct Categories {
     id: i64
     name: string
+    kind: string
+    capabilities: string
+    uses: string
 }
 
 struct ListItemsRow {
@@ -34,6 +62,13 @@ struct ListItemsRow {
     reorderMilli: i64
     location: string
     notes: string
+    kind: string
+    handle: string
+    runtimeS: i64
+    runtimeAt: i64
+    portionMilli: i64
+    capabilities: string
+    uses: string
 }
 
 struct ListExpensesRow {
@@ -61,6 +96,67 @@ struct LowStockItemsRow {
     location: string
 }
 
+struct ListBindingsRow {
+    itemId: i64
+    capability: string
+    source: string
+    access: string
+    boundAt: string
+    handle: string
+    name: string
+}
+
+// One thing that happened. at is Unix seconds. level is info, warning or error. kind is what sort of thing it was (switch, rule, mode, test, stock, system), subject what it was about (an item's handle, a rule's name), actor who or what did it (person:ana, rule:keep-temperature, device, system). An entry that needs attention stays open until resolved_at is set.
+struct JournalEntries {
+    id: i64
+    at: i64
+    level: string
+    kind: string
+    subject: string
+    actor: string
+    message: string
+    resolvedAt: i64
+}
+
+// A rule: when `when_expr` holds (for for_s seconds, when set), run do_actions; when it stops holding — or, with clear_expr, when that holds — run else_actions. A rule fires at most once per cooldown_s. origin is preset (from the application's presets, kept current by them) or person. state is idle, pending or active; state_since and last_fired are Unix seconds.
+struct Rules {
+    id: i64
+    name: string
+    enabled: i64
+    whenExpr: string
+    clearExpr: string
+    forS: i64
+    cooldownS: i64
+    doActions: string
+    elseActions: string
+    origin: string
+    state: string
+    stateSince: i64
+    lastFired: i64
+    lastError: string
+}
+
+// A mode: a named change for a while. Starting it runs do_actions and suspends the rules named in suspends (comma-separated); it ends after duration_s (0: when someone ends it) and runs end_actions.
+struct RuleModes {
+    id: i64
+    name: string
+    title: string
+    durationS: i64
+    doActions: string
+    endActions: string
+    suspends: string
+    origin: string
+}
+
+// The mode in force, at most one: the row with id 1, or none.
+struct RuleModeActive {
+    id: i64
+    name: string
+    startedAt: i64
+    endsAt: i64
+    actor: string
+}
+
 // A chore definition and its next due time. next_due_epoch is Unix seconds; zero means the schedule has no wall-clock due time (a usage chore).
 struct Chores {
     id: i64
@@ -78,6 +174,10 @@ struct Chores {
     snoozedUntilEpoch: i64
     lastCompletedEpoch: i64
     createdAt: string
+    runtimeOf: string
+    runtimeSeen: i64
+    consumes: string
+    consumesMilli: i64
 }
 
 struct ListCompletionsRow {
@@ -88,58 +188,7 @@ struct ListCompletionsRow {
     note: string
 }
 
-// Equipment the application can call, read or simulate. Without a board a device is still a row with a state and the last value it reported.
-struct Devices {
-    id: i64
-    name: string
-    kind: string
-    state: string
-    lastValue: string
-    updatedEpoch: i64
-}
-
-// A rule is a metric, an operator and an action. The engine evaluates it when a value is fed in; the hardware binding can be added without changing the rule.
-struct AutomationRules {
-    id: i64
-    name: string
-    kind: string
-    metric: string
-    operator: string
-    threshold: string
-    action: string
-    enabled: i64
-    state: string
-    lastValue: string
-    updatedEpoch: i64
-}
-
-// Manual water tests, the chemistry log.
-struct WaterTests {
-    id: i64
-    parameter: string
-    value: string
-    unit: string
-    testedAt: string
-    note: string
-}
-
-// Operational modes with an expiry: water change, feeding, and so on.
-struct AquariumModes {
-    name: string
-    activeUntilEpoch: i64
-    note: string
-}
-
-// Append-only audit trail. A state change, a manual override, a trip.
-struct SystemEvents {
-    id: i64
-    severity: string
-    kind: string
-    message: string
-    createdEpoch: i64
-}
-
-// A dashboard widget. numeric shows the last value; chart shows the last `points` values as a sparkline. source_kind is manual or url.
+// A dashboard widget. numeric shows the last value; chart shows the last `points` values as a sparkline; status shows a badge with an ok/warn/bad/info state; button calls its configured hook; toggle reflects and sets a switch.  `position`, `size`, `decimals` and `pinned` are part of the card layout. The canonical definition lives here; a host includes this file's tables in its own SQL port so the module and the host cannot describe two different widgets tables.
 struct Widgets {
     id: i64
     title: string
@@ -164,6 +213,87 @@ struct WidgetValues {
     recordedEpoch: i64
 }
 
+// A tank. type is planted, community, reef or pond: what its targets are seeded from. lights_on and lights_off are HH:MM, what the light rules use.
+struct AquariumTanks {
+    id: i64
+    name: string
+    handle: string
+    volumeL: i64
+    typeValue: string
+    lightsOn: string
+    lightsOff: string
+    notes: string
+    createdAt: i64
+}
+
+// A parameter's target band for a tank, in thousandths: temperature 24.5–26 is 24500–26000.
+struct AquariumTargets {
+    tankId: i64
+    parameter: string
+    lowMilli: i64
+    highMilli: i64
+}
+
+// One water test: a parameter's value in thousandths, at a time, with the kit (an inventory consumable, by handle) that was used up, or by a sensor.
+struct AquariumTests {
+    id: i64
+    tankId: i64
+    parameter: string
+    valueMilli: i64
+    at: i64
+    kit: string
+    source: string
+    note: string
+}
+
+// One dose: a product (an inventory consumable, by handle) and how much of it, in the product's unit and thousandths.
+struct AquariumDoses {
+    id: i64
+    tankId: i64
+    product: string
+    amountMilli: i64
+    unit: string
+    at: i64
+    note: string
+}
+
+// One water change: the share of the tank's volume, in percent.
+struct AquariumWaterChanges {
+    id: i64
+    tankId: i64
+    percent: i64
+    at: i64
+    note: string
+}
+
+// What lives in a tank: fish, invertebrates, corals and plants, how many, since when, and how many were lost.
+struct AquariumLivestock {
+    id: i64
+    tankId: i64
+    kind: string
+    species: string
+    count: i64
+    lost: i64
+    addedAt: i64
+    notes: string
+}
+
+// The events the aquarium kept before the journal module (0.4 and earlier). It is read once, into the journal, and otherwise left as it was.
+struct SystemEvents {
+    id: i64
+    severity: string
+    kind: string
+    message: string
+    createdEpoch: i64
+}
+
+// Each value's history, one row per change, kept for 30 days. at is Unix seconds; value is the number, when the value is one.
+struct AppapiHistory {
+    id: string
+    at: i64
+    value: f64
+}
+
 // What is on hand, how much of it, and when to reorder.
 struct Items {
     id: i64
@@ -175,6 +305,20 @@ struct Items {
     location: string
     notes: string
     createdAt: string
+    kind: string
+    handle: string
+    runtimeS: i64
+    runtimeAt: i64
+    portionMilli: i64
+}
+
+// What an equipment item's capabilities are bound to: one gateway source each. access is control for a capability the item drives (a switch) and read for one it only reports (power, temperature). A source is controlled by one item at most, so two items cannot fight over one relay.
+struct ItemBindings {
+    itemId: i64
+    capability: string
+    source: string
+    access: string
+    boundAt: string
 }
 
 // One purchase line. Money is integer cents and quantity is thousandths, so a total never depends on the floating-point spelling of 12.34.

@@ -17,11 +17,21 @@ import std.core.result
 import std.core.slice
 import std.sql
 
+extern fn sql_list_appapi_values(db: SqlDb, out: Slice[AppapiValues], capacity: u32) u32;
+extern fn sql_put_appapi_value(id: string, value: string, unit: string, label: string, kind: string, updated_at: string, db: SqlDb) u32;
+extern fn sql_add_appapi_point(id: string, at: string, value: string, db: SqlDb) u32;
+extern fn sql_list_appapi_points(id: string, since: string, until: string, db: SqlDb, out: Slice[ListAppapiPointsRow], capacity: u32) u32;
+extern fn sql_prune_appapi_points(before: i64, db: SqlDb) u32;
+extern fn sql_list_appapi_derived(db: SqlDb, out: Slice[AppapiDerived], capacity: u32) u32;
+extern fn sql_put_appapi_derived(id: string, source: string, fnValue: string, window_s: string, unit: string, label: string, db: SqlDb) u32;
 extern fn sql_insert_category(name: string, db: SqlDb) u32;
 extern fn sql_list_categories(db: SqlDb, out: Slice[Categories], capacity: u32) u32;
-extern fn sql_insert_item(name: string, category_id: string, unit: string, quantity_milli: string, reorder_milli: string, location: string, notes: string, db: SqlDb) u32;
+extern fn sql_seed_category(name: string, kind: string, capabilities: string, uses: string, db: SqlDb) u32;
+extern fn sql_update_category_preset(kind: string, capabilities: string, uses: string, name: string, db: SqlDb) u32;
+extern fn sql_insert_item(name: string, category_id: string, unit: string, quantity_milli: string, reorder_milli: string, location: string, notes: string, kind: string, handle: string, db: SqlDb) u32;
 extern fn sql_list_items(db: SqlDb, out: Slice[ListItemsRow], capacity: u32) u32;
-extern fn sql_update_item_details(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, id: i64, db: SqlDb) u32;
+extern fn sql_update_item_details(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, kind: string, handle: string, portion_milli: i64, id: i64, db: SqlDb) u32;
+extern fn sql_set_item_runtime(runtime_s: i64, runtime_at: i64, id: i64, db: SqlDb) u32;
 extern fn sql_update_item_stock(delta: string, id: i64, db: SqlDb) u32;
 extern fn sql_insert_expense(item_id: string, item: string, category_id: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, purchased_at: string, comment: string, db: SqlDb) u32;
 extern fn sql_list_expenses(db: SqlDb, out: Slice[ListExpensesRow], capacity: u32) u32;
@@ -29,6 +39,29 @@ extern fn sql_delete_expense(id: i64, db: SqlDb) u32;
 extern fn sql_total_expenses(db: SqlDb, out: Slice[TotalExpensesRow], capacity: u32) u32;
 extern fn sql_insert_movement(item_id: string, kind: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, occurred_at: string, comment: string, db: SqlDb) u32;
 extern fn sql_low_stock_items(db: SqlDb, out: Slice[LowStockItemsRow], capacity: u32) u32;
+extern fn sql_list_bindings(db: SqlDb, out: Slice[ListBindingsRow], capacity: u32) u32;
+extern fn sql_bind_capability(item_id: string, capability: string, source: string, access: string, db: SqlDb) u32;
+extern fn sql_unbind_capability(item_id: i64, capability: string, db: SqlDb) u32;
+extern fn sql_set_item_handle(handle: string, id: i64, db: SqlDb) u32;
+extern fn sql_clear_item_handle(handle: string, id: string, db: SqlDb) u32;
+extern fn sql_insert_journal_entry(at: string, level: string, kind: string, subject: string, actor: string, message: string, db: SqlDb) u32;
+extern fn sql_list_journal_entries(since: string, level: string, kind: string, db: SqlDb, out: Slice[JournalEntries], capacity: u32) u32;
+extern fn sql_list_open_journal_entries(db: SqlDb, out: Slice[JournalEntries], capacity: u32) u32;
+extern fn sql_resolve_journal_entry(resolved_at: i64, id: i64, db: SqlDb) u32;
+extern fn sql_prune_journal_entries(before: i64, db: SqlDb) u32;
+extern fn sql_last_journal_entry(kind: string, subject: string, db: SqlDb, out: Slice[JournalEntries], capacity: u32) u32;
+extern fn sql_list_rules_all(db: SqlDb, out: Slice[Rules], capacity: u32) u32;
+extern fn sql_seed_rule(name: string, when_expr: string, clear_expr: string, for_s: string, cooldown_s: string, do_actions: string, else_actions: string, origin: string, db: SqlDb) u32;
+extern fn sql_update_preset_rule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, name: string, db: SqlDb) u32;
+extern fn sql_set_rule_state(state: string, state_since: i64, last_fired: i64, last_error: string, id: i64, db: SqlDb) u32;
+extern fn sql_set_rule_enabled(enabled: i64, id: i64, db: SqlDb) u32;
+extern fn sql_delete_person_rule(id: i64, db: SqlDb) u32;
+extern fn sql_list_rule_modes(db: SqlDb, out: Slice[RuleModes], capacity: u32) u32;
+extern fn sql_seed_rule_mode(name: string, title: string, duration_s: string, do_actions: string, end_actions: string, suspends: string, db: SqlDb) u32;
+extern fn sql_update_preset_mode(title: string, duration_s: i64, do_actions: string, end_actions: string, suspends: string, name: string, db: SqlDb) u32;
+extern fn sql_get_active_mode(db: SqlDb, out: Slice[RuleModeActive], capacity: u32) u32;
+extern fn sql_set_active_mode(name: string, started_at: string, ends_at: string, actor: string, db: SqlDb) u32;
+extern fn sql_clear_active_mode(db: SqlDb) u32;
 extern fn sql_insert_chore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, enabled: string, db: SqlDb) u32;
 extern fn sql_list_chores(db: SqlDb, out: Slice[Chores], capacity: u32) u32;
 extern fn sql_complete_chore(next_due_epoch: i64, last_completed_epoch: i64, usage_accum_seconds: i64, id: i64, db: SqlDb) u32;
@@ -36,19 +69,9 @@ extern fn sql_insert_completion(chore_id: string, completed_epoch: string, note:
 extern fn sql_snooze_chore(snoozed_until_epoch: i64, id: i64, db: SqlDb) u32;
 extern fn sql_add_usage(delta_seconds: string, id: i64, db: SqlDb) u32;
 extern fn sql_list_completions(db: SqlDb, out: Slice[ListCompletionsRow], capacity: u32) u32;
-extern fn sql_insert_device(name: string, kind: string, state: string, last_value: string, updated_epoch: string, db: SqlDb) u32;
-extern fn sql_list_devices(db: SqlDb, out: Slice[Devices], capacity: u32) u32;
-extern fn sql_update_device_state(state: string, updated_epoch: i64, id: i64, db: SqlDb) u32;
-extern fn sql_update_device_value(last_value: string, updated_epoch: i64, id: i64, db: SqlDb) u32;
-extern fn sql_insert_rule(name: string, kind: string, metric: string, operator: string, threshold: string, action: string, enabled: string, updated_epoch: string, db: SqlDb) u32;
-extern fn sql_list_rules(db: SqlDb, out: Slice[AutomationRules], capacity: u32) u32;
-extern fn sql_update_rule(enabled: i64, state: string, last_value: string, updated_epoch: i64, id: i64, db: SqlDb) u32;
-extern fn sql_insert_test(parameter: string, value: string, unit: string, tested_at: string, note: string, db: SqlDb) u32;
-extern fn sql_list_tests(db: SqlDb, out: Slice[WaterTests], capacity: u32) u32;
-extern fn sql_set_mode(name: string, active_until_epoch: string, note: string, db: SqlDb) u32;
-extern fn sql_get_modes(db: SqlDb, out: Slice[AquariumModes], capacity: u32) u32;
-extern fn sql_insert_event(severity: string, kind: string, message: string, created_epoch: string, db: SqlDb) u32;
-extern fn sql_list_events(db: SqlDb, out: Slice[SystemEvents], capacity: u32) u32;
+extern fn sql_set_chore_links(runtime_of: string, consumes: string, consumes_milli: i64, title: string, db: SqlDb) u32;
+extern fn sql_set_chore_runtime_seen(runtime_seen: i64, id: i64, db: SqlDb) u32;
+extern fn sql_seed_chore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, db: SqlDb) u32;
 extern fn sql_insert_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) u32;
 extern fn sql_list_widgets(db: SqlDb, out: Slice[Widgets], capacity: u32) u32;
 extern fn sql_update_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: i64, decimals: i64, id: i64, db: SqlDb) u32;
@@ -59,8 +82,102 @@ extern fn sql_delete_widget(id: i64, db: SqlDb) u32;
 extern fn sql_insert_widget_value(widget_id: string, value_text: string, value_milli: string, recorded_epoch: string, db: SqlDb) u32;
 extern fn sql_list_widget_values(widget_id: i64, db: SqlDb, out: Slice[WidgetValues], capacity: u32) u32;
 extern fn sql_latest_widget_value(widget_id: i64, db: SqlDb, out: Slice[WidgetValues], capacity: u32) u32;
+extern fn sql_update_widget_source_only(source_kind: string, source: string, id: i64, db: SqlDb) u32;
+extern fn sql_list_tanks(db: SqlDb, out: Slice[AquariumTanks], capacity: u32) u32;
+extern fn sql_insert_tank(name: string, handle: string, volume_l: string, typeValue: string, lights_on: string, lights_off: string, notes: string, created_at: string, db: SqlDb) u32;
+extern fn sql_update_tank(name: string, volume_l: i64, typeValue: string, lights_on: string, lights_off: string, notes: string, id: i64, db: SqlDb) u32;
+extern fn sql_list_targets(tank_id: i64, db: SqlDb, out: Slice[AquariumTargets], capacity: u32) u32;
+extern fn sql_put_target(tank_id: string, parameter: string, low_milli: string, high_milli: string, db: SqlDb) u32;
+extern fn sql_seed_target(tank_id: string, parameter: string, low_milli: string, high_milli: string, db: SqlDb) u32;
+extern fn sql_insert_test(tank_id: string, parameter: string, value_milli: string, at: string, kit: string, source: string, note: string, db: SqlDb) u32;
+extern fn sql_list_tests(tank_id: i64, since: string, db: SqlDb, out: Slice[AquariumTests], capacity: u32) u32;
+extern fn sql_insert_dose(tank_id: string, product: string, amount_milli: string, unit: string, at: string, note: string, db: SqlDb) u32;
+extern fn sql_list_doses(tank_id: i64, db: SqlDb, out: Slice[AquariumDoses], capacity: u32) u32;
+extern fn sql_insert_water_change(tank_id: string, percent: string, at: string, note: string, db: SqlDb) u32;
+extern fn sql_list_water_changes(tank_id: i64, db: SqlDb, out: Slice[AquariumWaterChanges], capacity: u32) u32;
+extern fn sql_insert_livestock(tank_id: string, kind: string, species: string, count: string, added_at: string, notes: string, db: SqlDb) u32;
+extern fn sql_list_livestock(tank_id: i64, db: SqlDb, out: Slice[AquariumLivestock], capacity: u32) u32;
+extern fn sql_record_loss(id: i64, db: SqlDb) u32;
+extern fn sql_list_legacy_events(db: SqlDb, out: Slice[SystemEvents], capacity: u32) u32;
+extern fn sql_resolve_all_journal(db: SqlDb) u32;
+fn ListAppapiValues(db: SqlDb, out: Slice[AppapiValues], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_appapi_values(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn PutAppapiValue(id: string, value: string, unit: string, label: string, kind: string, updated_at: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_put_appapi_value(id, value, unit, label, kind, updated_at, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn AddAppapiPoint(id: string, at: string, value: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_add_appapi_point(id, at, value, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListAppapiPoints(id: string, since: string, until: string, db: SqlDb, out: Slice[ListAppapiPointsRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_appapi_points(id, since, until, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn PruneAppapiPoints(before: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_prune_appapi_points(before, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListAppapiDerived(db: SqlDb, out: Slice[AppapiDerived], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_appapi_derived(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn PutAppapiDerived(id: string, source: string, fnValue: string, window_s: string, unit: string, label: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_put_appapi_derived(id, source, fnValue, window_s, unit, label, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
 fn InsertCategory(name: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_category(name, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -69,41 +186,88 @@ fn ListCategories(db: SqlDb, out: Slice[Categories], capacity: u32) Result[u32, 
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_categories(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
-fn InsertItem(name: string, category_id: string, unit: string, quantity_milli: string, reorder_milli: string, location: string, notes: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_item(name, category_id, unit, quantity_milli, reorder_milli, location, notes, db)
+fn SeedCategory(name: string, kind: string, capabilities: string, uses: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_seed_category(name, kind, capabilities, uses, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn UpdateCategoryPreset(kind: string, capabilities: string, uses: string, name: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_category_preset(kind, capabilities, uses, name, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn InsertItem(name: string, category_id: string, unit: string, quantity_milli: string, reorder_milli: string, location: string, notes: string, kind: string, handle: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_item(name, category_id, unit, quantity_milli, reorder_milli, location, notes, kind, handle, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 // Note: the type of category is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of capabilities is not one it names, which is not one this knows; it is carried as text.
+// Note: the type of uses is not one it names, which is not one this knows; it is carried as text.
 fn ListItems(db: SqlDb, out: Slice[ListItemsRow], capacity: u32) Result[u32, SqlError] {
     if capacity == 0 {
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_items(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
-fn UpdateItemDetails(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_item_details(name, category_id, unit, reorder_milli, location, notes, id, db)
+fn UpdateItemDetails(name: string, category_id: string, unit: string, reorder_milli: i64, location: string, notes: string, kind: string, handle: string, portion_milli: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_item_details(name, category_id, unit, reorder_milli, location, notes, kind, handle, portion_milli, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn SetItemRuntime(runtime_s: i64, runtime_at: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_item_runtime(runtime_s, runtime_at, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn UpdateItemStock(delta: string, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_update_item_stock(delta, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn InsertExpense(item_id: string, item: string, category_id: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, purchased_at: string, comment: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_expense(item_id, item, category_id, quantity_milli, unit_price_cents, total_cents, source, purchased_at, comment, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -113,14 +277,19 @@ fn ListExpenses(db: SqlDb, out: Slice[ListExpensesRow], capacity: u32) Result[u3
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_expenses(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
 fn DeleteExpense(id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_delete_expense(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -129,14 +298,19 @@ fn TotalExpenses(db: SqlDb, out: Slice[TotalExpensesRow], capacity: u32) Result[
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_total_expenses(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
 fn InsertMovement(item_id: string, kind: string, quantity_milli: string, unit_price_cents: string, total_cents: string, source: string, occurred_at: string, comment: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_movement(item_id, kind, quantity_milli, unit_price_cents, total_cents, source, occurred_at, comment, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -145,14 +319,247 @@ fn LowStockItems(db: SqlDb, out: Slice[LowStockItemsRow], capacity: u32) Result[
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_low_stock_items(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
+fn ListBindings(db: SqlDb, out: Slice[ListBindingsRow], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_bindings(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn BindCapability(item_id: string, capability: string, source: string, access: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_bind_capability(item_id, capability, source, access, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn UnbindCapability(item_id: i64, capability: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_unbind_capability(item_id, capability, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn SetItemHandle(handle: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_item_handle(handle, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ClearItemHandle(handle: string, id: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_clear_item_handle(handle, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn InsertJournalEntry(at: string, level: string, kind: string, subject: string, actor: string, message: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_journal_entry(at, level, kind, subject, actor, message, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListJournalEntries(since: string, level: string, kind: string, db: SqlDb, out: Slice[JournalEntries], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_journal_entries(since, level, kind, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn ListOpenJournalEntries(db: SqlDb, out: Slice[JournalEntries], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_open_journal_entries(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn ResolveJournalEntry(resolved_at: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_resolve_journal_entry(resolved_at, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn PruneJournalEntries(before: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_prune_journal_entries(before, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn LastJournalEntry(kind: string, subject: string, db: SqlDb, out: Slice[JournalEntries], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_last_journal_entry(kind, subject, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn ListRulesAll(db: SqlDb, out: Slice[Rules], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_rules_all(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn SeedRule(name: string, when_expr: string, clear_expr: string, for_s: string, cooldown_s: string, do_actions: string, else_actions: string, origin: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_seed_rule(name, when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, origin, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn UpdatePresetRule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, name: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_preset_rule(when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, name, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn SetRuleState(state: string, state_since: i64, last_fired: i64, last_error: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_rule_state(state, state_since, last_fired, last_error, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn SetRuleEnabled(enabled: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_rule_enabled(enabled, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeletePersonRule(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_person_rule(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListRuleModes(db: SqlDb, out: Slice[RuleModes], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_rule_modes(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn SeedRuleMode(name: string, title: string, duration_s: string, do_actions: string, end_actions: string, suspends: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_seed_rule_mode(name, title, duration_s, do_actions, end_actions, suspends, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn UpdatePresetMode(title: string, duration_s: i64, do_actions: string, end_actions: string, suspends: string, name: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_preset_mode(title, duration_s, do_actions, end_actions, suspends, name, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn GetActiveMode(db: SqlDb, out: Slice[RuleModeActive], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_active_mode(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn SetActiveMode(name: string, started_at: string, ends_at: string, actor: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_active_mode(name, started_at, ends_at, actor, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ClearActiveMode(db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_clear_active_mode(db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
 fn InsertChore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, enabled: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_chore(title, description, schedule_kind, schedule_value, interval_hours, usage_interval_hours, grace_hours, priority, next_due_epoch, enabled, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -161,29 +568,46 @@ fn ListChores(db: SqlDb, out: Slice[Chores], capacity: u32) Result[u32, SqlError
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_chores(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
 fn CompleteChore(next_due_epoch: i64, last_completed_epoch: i64, usage_accum_seconds: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_complete_chore(next_due_epoch, last_completed_epoch, usage_accum_seconds, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn InsertCompletion(chore_id: string, completed_epoch: string, note: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_completion(chore_id, completed_epoch, note, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn SnoozeChore(snoozed_until_epoch: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_snooze_chore(snoozed_until_epoch, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn AddUsage(delta_seconds: string, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_add_usage(delta_seconds, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -192,109 +616,46 @@ fn ListCompletions(db: SqlDb, out: Slice[ListCompletionsRow], capacity: u32) Res
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_completions(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
-fn InsertDevice(name: string, kind: string, state: string, last_value: string, updated_epoch: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_device(name, kind, state, last_value, updated_epoch, db)
+fn SetChoreLinks(runtime_of: string, consumes: string, consumes_milli: i64, title: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_chore_links(runtime_of, consumes, consumes_milli, title, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
-fn ListDevices(db: SqlDb, out: Slice[Devices], capacity: u32) Result[u32, SqlError] {
-    if capacity == 0 {
-        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+fn SetChoreRuntimeSeen(runtime_seen: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_set_chore_runtime_seen(runtime_seen, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
-    let wrote: u32 = sql_list_devices(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
-    }
-    return Ok[u32, SqlError](wrote)
-}
-
-fn UpdateDeviceState(state: string, updated_epoch: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_device_state(state, updated_epoch, id, db)
     return Ok[u32, SqlError](changed)
 }
 
-fn UpdateDeviceValue(last_value: string, updated_epoch: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_device_value(last_value, updated_epoch, id, db)
+fn SeedChore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_seed_chore(title, description, schedule_kind, schedule_value, interval_hours, usage_interval_hours, grace_hours, priority, next_due_epoch, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
-}
-
-fn InsertRule(name: string, kind: string, metric: string, operator: string, threshold: string, action: string, enabled: string, updated_epoch: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_rule(name, kind, metric, operator, threshold, action, enabled, updated_epoch, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn ListRules(db: SqlDb, out: Slice[AutomationRules], capacity: u32) Result[u32, SqlError] {
-    if capacity == 0 {
-        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
-    }
-    let wrote: u32 = sql_list_rules(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
-    }
-    return Ok[u32, SqlError](wrote)
-}
-
-fn UpdateRule(enabled: i64, state: string, last_value: string, updated_epoch: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_update_rule(enabled, state, last_value, updated_epoch, id, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn InsertTest(parameter: string, value: string, unit: string, tested_at: string, note: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_test(parameter, value, unit, tested_at, note, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn ListTests(db: SqlDb, out: Slice[WaterTests], capacity: u32) Result[u32, SqlError] {
-    if capacity == 0 {
-        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
-    }
-    let wrote: u32 = sql_list_tests(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
-    }
-    return Ok[u32, SqlError](wrote)
-}
-
-fn SetMode(name: string, active_until_epoch: string, note: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_set_mode(name, active_until_epoch, note, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn GetModes(db: SqlDb, out: Slice[AquariumModes], capacity: u32) Result[u32, SqlError] {
-    if capacity == 0 {
-        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
-    }
-    let wrote: u32 = sql_get_modes(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
-    }
-    return Ok[u32, SqlError](wrote)
-}
-
-fn InsertEvent(severity: string, kind: string, message: string, created_epoch: string, db: SqlDb) Result[u32, SqlError] {
-    let changed: u32 = sql_insert_event(severity, kind, message, created_epoch, db)
-    return Ok[u32, SqlError](changed)
-}
-
-fn ListEvents(db: SqlDb, out: Slice[SystemEvents], capacity: u32) Result[u32, SqlError] {
-    if capacity == 0 {
-        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
-    }
-    let wrote: u32 = sql_list_events(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
-    }
-    return Ok[u32, SqlError](wrote)
 }
 
 fn InsertWidget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_widget(title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -303,39 +664,64 @@ fn ListWidgets(db: SqlDb, out: Slice[Widgets], capacity: u32) Result[u32, SqlErr
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_widgets(db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
 
 fn UpdateWidget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: i64, decimals: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_update_widget(title, kind, source_kind, source, method, unit, points, decimals, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn MoveWidget(position: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_move_widget(position, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn ResizeWidget(size: string, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_resize_widget(size, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn PinWidget(pinned: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_pin_widget(pinned, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn DeleteWidget(id: i64, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_delete_widget(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
 fn InsertWidgetValue(widget_id: string, value_text: string, value_milli: string, recorded_epoch: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_widget_value(widget_id, value_text, value_milli, recorded_epoch, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
     return Ok[u32, SqlError](changed)
 }
 
@@ -344,8 +730,9 @@ fn ListWidgetValues(widget_id: i64, db: SqlDb, out: Slice[WidgetValues], capacit
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_list_widget_values(widget_id, db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
 }
@@ -355,9 +742,193 @@ fn LatestWidgetValue(widget_id: i64, db: SqlDb, out: Slice[WidgetValues], capaci
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
     }
     let wrote: u32 = sql_latest_widget_value(widget_id, db, out, capacity)
-    if wrote == 0 {
-        return Err[u32, SqlError](SqlError{ "the statement failed", -1 })
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
     }
     return Ok[u32, SqlError](wrote)
+}
+
+fn UpdateWidgetSourceOnly(source_kind: string, source: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_widget_source_only(source_kind, source, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListTanks(db: SqlDb, out: Slice[AquariumTanks], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_tanks(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn InsertTank(name: string, handle: string, volume_l: string, typeValue: string, lights_on: string, lights_off: string, notes: string, created_at: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_tank(name, handle, volume_l, typeValue, lights_on, lights_off, notes, created_at, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn UpdateTank(name: string, volume_l: i64, typeValue: string, lights_on: string, lights_off: string, notes: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_tank(name, volume_l, typeValue, lights_on, lights_off, notes, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListTargets(tank_id: i64, db: SqlDb, out: Slice[AquariumTargets], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_targets(tank_id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn PutTarget(tank_id: string, parameter: string, low_milli: string, high_milli: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_put_target(tank_id, parameter, low_milli, high_milli, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn SeedTarget(tank_id: string, parameter: string, low_milli: string, high_milli: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_seed_target(tank_id, parameter, low_milli, high_milli, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn InsertTest(tank_id: string, parameter: string, value_milli: string, at: string, kit: string, source: string, note: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_test(tank_id, parameter, value_milli, at, kit, source, note, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListTests(tank_id: i64, since: string, db: SqlDb, out: Slice[AquariumTests], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_tests(tank_id, since, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn InsertDose(tank_id: string, product: string, amount_milli: string, unit: string, at: string, note: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_dose(tank_id, product, amount_milli, unit, at, note, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListDoses(tank_id: i64, db: SqlDb, out: Slice[AquariumDoses], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_doses(tank_id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn InsertWaterChange(tank_id: string, percent: string, at: string, note: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_water_change(tank_id, percent, at, note, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListWaterChanges(tank_id: i64, db: SqlDb, out: Slice[AquariumWaterChanges], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_water_changes(tank_id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn InsertLivestock(tank_id: string, kind: string, species: string, count: string, added_at: string, notes: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_insert_livestock(tank_id, kind, species, count, added_at, notes, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListLivestock(tank_id: i64, db: SqlDb, out: Slice[AquariumLivestock], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_livestock(tank_id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn RecordLoss(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_record_loss(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ListLegacyEvents(db: SqlDb, out: Slice[SystemEvents], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_list_legacy_events(db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn ResolveAllJournal(db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_resolve_all_journal(db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
 }
 

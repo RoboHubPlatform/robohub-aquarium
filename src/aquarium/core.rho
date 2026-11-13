@@ -1,0 +1,551 @@
+//
+// @file core.rho
+// @brief What every aquarium page uses: time, numbers, the parameters, tanks and their targets.
+//
+// @module aquarium
+// @project robohub-aquarium
+// @author Aurel Miron
+// @date 2026-11-13
+//
+// SPDX-License-Identifier: MIT
+//
+
+module aquarium
+
+/// The water parameters the aquarium knows: key|label|unit, one per line.
+const AQUA_PARAMETERS: string = "temperature|Temperature|°C\nph|pH|\nkh|KH|°dH\ngh|GH|°dH\nno3|Nitrate NO₃|mg/L\nno2|Nitrite NO₂|mg/L\nnh3|Ammonia NH₃|mg/L\npo4|Phosphate PO₄|mg/L\n"
+
+const AQUA_TANKS: u32 = 32
+const AQUA_ROWS: u32 = 500
+
+/* -------------------------------------------------------------------------- */
+/*  Small things                                                              */
+/* -------------------------------------------------------------------------- */
+
+fn aqua_ignore(value: Result[u32, SqlError]) void {
+}
+
+fn aqua_trim(text: string) string {
+    var out: string = text
+    while rho_strlen(out) > 0 && (rho_str_eq(rho_str_slice(out, 0, 1), " ") || rho_str_eq(rho_str_slice(out, 0, 1), "\n")) {
+        out = rho_str_slice(out, 1, u32(rho_strlen(out)) - 1)
+    }
+    while rho_strlen(out) > 0 && (rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), " ") ||
+        rho_str_eq(rho_str_slice(out, u32(rho_strlen(out)) - 1, 1), "\n")) {
+        out = rho_str_slice(out, 0, u32(rho_strlen(out)) - 1)
+    }
+    return out
+}
+
+fn aqua_form(body: string, name: string) string {
+    return aqua_trim(form_value(body, name))
+}
+
+fn aqua_db_path() string {
+    var workspace: string = getenv("ROBOHUB_APP_WORKSPACE")
+    if workspace == "" {
+        workspace = getenv("HOME") + "/.rho/aquarium"
+    }
+    let dir: string = workspace + "/data"
+    if !rho_path_exists(dir) {
+        ignore_u32(rho_exec("mkdir", "-p " + dir, "/dev/null"))
+    }
+    return dir + "/app.db"
+}
+
+fn aqua_open() Result[SqlDb, string] {
+    let opened: Result[SqlDb, string] = sql_open(aqua_db_path())
+    if opened.is_ok {
+        ignore_u32(sql_apply(opened.ok, ""))
+    }
+    return opened
+}
+
+fn aqua_now() u32 {
+    let report: string = aqua_db_path() + ".now"
+    if rho_exec("date", "+%s", report) == 0 {
+        return rho_int_from_str(aqua_trim(rho_read_text(report)))
+    }
+    return 0
+}
+
+// aqua_field is the field at an index of a `|`-separated line.
+fn aqua_field(line: string, index: u32) string {
+    var rest: string = line
+    var i: u32 = 0
+    while true {
+        let at: i32 = rho_str_index_of(rest, "|")
+        if i == index {
+            if at < 0 {
+                return rest
+            }
+            return rho_str_slice(rest, 0, u32(at))
+        }
+        if at < 0 {
+            return ""
+        }
+        rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
+        i = i + 1
+    }
+    return ""
+}
+
+fn aqua_line(rest: string) string {
+    let at: i32 = rho_str_index_of(rest, "\n")
+    if at < 0 {
+        return rest
+    }
+    return rho_str_slice(rest, 0, u32(at))
+}
+
+fn aqua_after_line(rest: string) string {
+    let at: i32 = rho_str_index_of(rest, "\n")
+    if at < 0 {
+        return ""
+    }
+    return rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
+}
+
+// aqua_toast is the script that shows a message once the page has loaded.
+fn aqua_toast(message: string) string {
+    if message == "" {
+        return ""
+    }
+    return "<script>document.addEventListener(\"DOMContentLoaded\",function(){if(window.rhoToast){window.rhoToast(" +
+        json_string(message) + ", \"info\");}});</script>"
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Numbers in thousandths                                                    */
+/* -------------------------------------------------------------------------- */
+
+struct AquaNumber {
+    ok: bool
+    milli: i64
+}
+
+// aqua_number reads a decimal written with a dot or a comma, in thousandths.
+fn aqua_number(text: string) AquaNumber {
+    var value: string = aqua_trim(text)
+    var negative: bool = false
+    if rho_strlen(value) > 0 && rho_str_eq(rho_str_slice(value, 0, 1), "-") {
+        negative = true
+        value = rho_str_slice(value, 1, u32(rho_strlen(value)) - 1)
+    }
+    if value == "" {
+        return AquaNumber{ false, 0 }
+    }
+    var whole: i64 = 0
+    var fraction: i64 = 0
+    var digits: u32 = 0
+    var dot: bool = false
+    var i: u32 = 0
+    while i < u32(rho_strlen(value)) {
+        let ch: string = rho_str_slice(value, i, 1)
+        let digit: i32 = rho_str_index_of("0123456789", ch)
+        if (rho_str_eq(ch, ".") || rho_str_eq(ch, ",")) && !dot {
+            dot = true
+        } else if digit < 0 {
+            return AquaNumber{ false, 0 }
+        } else if dot {
+            if digits < 3 {
+                fraction = fraction * 10 + i64(digit)
+                digits = digits + 1
+            }
+        } else {
+            whole = whole * 10 + i64(digit)
+        }
+        i = i + 1
+    }
+    while digits < 3 {
+        fraction = fraction * 10
+        digits = digits + 1
+    }
+    var milli: i64 = whole * 1000 + fraction
+    if negative {
+        milli = 0 - milli
+    }
+    return AquaNumber{ true, milli }
+}
+
+fn aqua_i64(value: i64) string {
+    if value == 0 {
+        return "0"
+    }
+    var rest: i64 = value
+    var sign: string = ""
+    if rest < 0 {
+        sign = "-"
+        rest = 0 - rest
+    }
+    var out: string = ""
+    while rest > 0 {
+        out = rho_str_slice("0123456789", u32(rest - (rest / 10) * 10), 1) + out
+        rest = rest / 10
+    }
+    return sign + out
+}
+
+// aqua_decimal writes thousandths as a decimal with no trailing zeros.
+fn aqua_decimal(milli: i64) string {
+    var value: i64 = milli
+    var sign: string = ""
+    if value < 0 {
+        sign = "-"
+        value = 0 - value
+    }
+    let whole: i64 = value / 1000
+    let fraction: i64 = value - whole * 1000
+    var out: string = sign + aqua_i64(whole)
+    if fraction > 0 {
+        var digits: string = aqua_i64(fraction)
+        while rho_strlen(digits) < 3 {
+            digits = "0" + digits
+        }
+        while rho_str_eq(rho_str_slice(digits, u32(rho_strlen(digits)) - 1, 1), "0") {
+            digits = rho_str_slice(digits, 0, u32(rho_strlen(digits)) - 1)
+        }
+        out = out + "." + digits
+    }
+    return out
+}
+
+// aqua_round writes a reading to so many decimals, rounding half away from zero:
+// a probe's 24.873 is 24.9.
+fn aqua_round(text: string, places: u32) string {
+    let value: AquaNumber = aqua_number(text)
+    if !value.ok {
+        return text
+    }
+    var unit_milli: i64 = 1000
+    var i: u32 = 0
+    while i < places {
+        unit_milli = unit_milli / 10
+        i = i + 1
+    }
+    var milli: i64 = value.milli
+    var half: i64 = unit_milli / 2
+    if milli < 0 {
+        half = 0 - half
+    }
+    milli = ((milli + half) / unit_milli) * unit_milli
+    return aqua_decimal(milli)
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Parameters                                                                */
+/* -------------------------------------------------------------------------- */
+
+fn aqua_parameter_line(key: string) string {
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if rho_str_eq(aqua_field(line, 0), key) {
+            return line
+        }
+    }
+    return ""
+}
+
+fn aqua_parameter_label(key: string) string {
+    let line: string = aqua_parameter_line(key)
+    if line == "" {
+        return key
+    }
+    return aqua_field(line, 1)
+}
+
+fn aqua_parameter_unit(key: string) string {
+    return aqua_field(aqua_parameter_line(key), 2)
+}
+
+fn aqua_parameter_choices() string {
+    var out: string = ""
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let line: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if line != "" {
+            if out != "" {
+                out = out + ","
+            }
+            out = out + aqua_field(line, 0) + "|" + aqua_field(line, 1)
+        }
+    }
+    return out
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Tanks                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/// A tank as the pages use it, or none when id is 0.
+struct AquaTank {
+    id: u32
+    name: string
+    handle: string
+    volume: u32
+    kind: string
+    lights_on: string
+    lights_off: string
+    notes: string
+}
+
+fn aqua_no_tank() AquaTank {
+    return AquaTank{ 0, "", "", 0, "", "", "", "" }
+}
+
+fn aqua_tank_of(row: AquariumTanks) AquaTank {
+    return AquaTank{ u32(row.id), row.name, row.handle, u32(row.volumeL), row.typeValue,
+        row.lightsOn, row.lightsOff, row.notes }
+}
+
+// aqua_tanks is every tank, as `id|name` lines, for a choice.
+fn aqua_tank_choices() string {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return ""
+    }
+    let rows: AquariumTanks[32]
+    let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+    let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+    sql_close(opened.ok)
+    var out: string = ""
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok {
+            if out != "" {
+                out = out + ","
+            }
+            out = out + rho_int_to_str(u32(rows[i].id)) + "|" + rows[i].name
+            i = i + 1
+        }
+    }
+    return out
+}
+
+// aqua_tank is the tank a page is about: the one asked for by id, the one
+// chosen in settings, or the first. A new installation has one, made at start.
+fn aqua_tank(asked: u32) AquaTank {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return aqua_no_tank()
+    }
+    let rows: AquariumTanks[32]
+    let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+    let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+    sql_close(opened.ok)
+    if !listed.is_ok || listed.ok == 0 {
+        return aqua_no_tank()
+    }
+    var wanted: u32 = asked
+    if wanted == 0 {
+        wanted = rho_int_from_str(settings_get("aquarium.tank", "0"))
+    }
+    var i: u32 = 0
+    while i < listed.ok {
+        if u32(rows[i].id) == wanted {
+            return aqua_tank_of(rows[i])
+        }
+        i = i + 1
+    }
+    return aqua_tank_of(rows[0])
+}
+
+fn aqua_tank_param(req: Request) AquaTank {
+    return aqua_tank(rho_int_from_str(request_query_param(req, "tank")))
+}
+
+// aqua_type_label is a kind of tank as people say it.
+fn aqua_type_label(kind: string) string {
+    let label: string = aqua_trim(yaml.value(aqua_presets_path("targets"), "types." + kind + ".label"))
+    if label == "" {
+        return kind
+    }
+    return label
+}
+
+fn aqua_type_choices() string {
+    var out: string = ""
+    var rest: string = yaml.keys(aqua_presets_path("targets"), "types")
+    while rest != "" {
+        let kind: string = aqua_line(rest)
+        rest = aqua_after_line(rest)
+        if kind != "" {
+            if out != "" {
+                out = out + ","
+            }
+            out = out + kind + "|" + aqua_type_label(kind)
+        }
+    }
+    return out
+}
+
+// aqua_add_tank makes a tank and seeds its targets from its kind.
+fn aqua_add_tank(name: string, volume: u32, kind: string, lights_on: string, lights_off: string, notes: string) u32 {
+    var handle: string = inventory_handle(name)
+    if handle == "" {
+        handle = "tank"
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return 0
+    }
+    let db: SqlDb = opened.ok
+    let added: Result[u32, SqlError] = InsertTank(name, handle, rho_int_to_str(volume), kind, lights_on, lights_off,
+        notes, rho_int_to_str(aqua_now()), db)
+    sql_close(db)
+    if !added.is_ok || added.ok == 0 {
+        return 0
+    }
+    let tank: AquaTank = aqua_tank_by_handle(handle)
+    aqua_seed_targets(tank.id, kind, false)
+    journal_info("tank", handle, "person", name + " added: " + rho_int_to_str(volume) + " L " + aqua_type_label(kind))
+    return tank.id
+}
+
+fn aqua_tank_by_handle(handle: string) AquaTank {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return aqua_no_tank()
+    }
+    let rows: AquariumTanks[32]
+    let slice: Slice[AquariumTanks] = Slice[AquariumTanks]{ Ptr[AquariumTanks](&rows[0]), AQUA_TANKS }
+    let listed: Result[u32, SqlError] = ListTanks(opened.ok, slice, AQUA_TANKS)
+    sql_close(opened.ok)
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok {
+            if rho_str_eq(rows[i].handle, handle) {
+                return aqua_tank_of(rows[i])
+            }
+            i = i + 1
+        }
+    }
+    return aqua_no_tank()
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Targets                                                                   */
+/* -------------------------------------------------------------------------- */
+
+// aqua_presets_path is where a presets file the aquarium reads by path is put:
+// the YAML reader takes a file, and the presets are embedded in the program.
+fn aqua_presets_path(name: string) string {
+    let path: string = aqua_db_path() + ".presets-" + name + ".yml"
+    if !rho_path_exists(path) {
+        ignore_bool(rho_write_text(path, rho_asset("aquarium", "presets/" + name + ".yml")))
+    }
+    return path
+}
+
+// aqua_presets_refresh writes the presets the aquarium reads by path again, at
+// start, so a new version's presets are the ones read.
+fn aqua_presets_refresh() void {
+    ignore_bool(rho_write_text(aqua_db_path() + ".presets-targets.yml", rho_asset("aquarium", "presets/targets.yml")))
+    ignore_bool(rho_write_text(aqua_db_path() + ".presets-roles.yml", rho_asset("aquarium", "presets/roles.yml")))
+}
+
+/// A target band, in thousandths; known is false when the tank has none.
+struct AquaBand {
+    known: bool
+    low: i64
+    high: i64
+}
+
+// aqua_seed_targets gives a tank the bands of its kind; with replace, the bands
+// it already has are replaced too (its kind changed).
+fn aqua_seed_targets(tank_id: u32, kind: string, replace: bool) void {
+    let path: string = aqua_presets_path("targets")
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return
+    }
+    let db: SqlDb = opened.ok
+    var rest: string = AQUA_PARAMETERS
+    while rest != "" {
+        let key: string = aqua_field(aqua_line(rest), 0)
+        rest = aqua_after_line(rest)
+        let band: string = aqua_trim(yaml.value(path, "types." + kind + "." + key))
+        let dash: i32 = rho_str_index_of(band, "-")
+        if key != "" && dash > 0 {
+            let low: AquaNumber = aqua_number(rho_str_slice(band, 0, u32(dash)))
+            let high: AquaNumber = aqua_number(rho_str_slice(band, u32(dash) + 1, u32(rho_strlen(band)) - u32(dash) - 1))
+            if low.ok && high.ok {
+                if replace {
+                    aqua_ignore(PutTarget(rho_int_to_str(tank_id), key, aqua_i64(low.milli), aqua_i64(high.milli), db))
+                } else {
+                    aqua_ignore(SeedTarget(rho_int_to_str(tank_id), key, aqua_i64(low.milli), aqua_i64(high.milli), db))
+                }
+            }
+        }
+    }
+    sql_close(db)
+}
+
+fn aqua_band(tank_id: u32, parameter: string) AquaBand {
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return AquaBand{ false, 0, 0 }
+    }
+    let rows: AquariumTargets[16]
+    let slice: Slice[AquariumTargets] = Slice[AquariumTargets]{ Ptr[AquariumTargets](&rows[0]), 16 }
+    let listed: Result[u32, SqlError] = ListTargets(i64(tank_id), opened.ok, slice, 16)
+    sql_close(opened.ok)
+    if listed.is_ok {
+        var i: u32 = 0
+        while i < listed.ok {
+            if rho_str_eq(rows[i].parameter, parameter) {
+                return AquaBand{ true, rows[i].lowMilli, rows[i].highMilli }
+            }
+            i = i + 1
+        }
+    }
+    return AquaBand{ false, 0, 0 }
+}
+
+fn aqua_band_text(band: AquaBand) string {
+    if !band.known {
+        return "—"
+    }
+    return aqua_decimal(band.low) + "–" + aqua_decimal(band.high)
+}
+
+// aqua_in_band is "in", "low" or "high" for a value against a band, "" with none.
+fn aqua_in_band(band: AquaBand, milli: i64) string {
+    if !band.known {
+        return ""
+    }
+    if milli < band.low {
+        return "low"
+    }
+    if milli > band.high {
+        return "high"
+    }
+    return "in"
+}
+
+/* -------------------------------------------------------------------------- */
+/*  What the aquarium offers, and what its rules read                         */
+/* -------------------------------------------------------------------------- */
+
+// aqua_publish offers a tank's newest reading of a parameter to other
+// applications and to the rules: as `<tank>.<parameter>`, and as `<parameter>`
+// for the first tank, so a rule can say `no3 > 25`.
+fn aqua_publish(tank: AquaTank, parameter: string, milli: i64) void {
+    let label: string = aqua_parameter_label(parameter)
+    let unit: string = aqua_parameter_unit(parameter)
+    ignore_bool(appapi_publish(tank.handle + "." + parameter, aqua_decimal(milli), unit, tank.name + " · " + label))
+    let first: AquaTank = aqua_tank(0)
+    if first.id == tank.id {
+        ignore_bool(appapi_publish(parameter, aqua_decimal(milli), unit, label))
+    }
+}
+
+// rules_host_value is the aquarium's own values a rule may name — its published
+// test results and derived values (`no3`, `days_since_water_change`) — asked
+// before an inventory item is read.
+fn rules_host_value(ref: string) string {
+    return appapi_value(ref)
+}
