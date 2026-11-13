@@ -184,3 +184,7 @@ Several tanks, each with its own equipment, rules and chores.
 - The overview, the Water page and the temperature chart read the tank's own
   probe, through its heater; the light status is the tank's light.
 - The feeding and maintenance modes still act on the first tank's equipment.
+
+## [0.6.1] - 2026-11-13
+
+Built on rules 0.1.4: a rule whose action fails says so once and tries again a minute later, even when the temperature hovers at its threshold.
