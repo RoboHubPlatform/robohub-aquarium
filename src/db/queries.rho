@@ -62,6 +62,10 @@ extern fn sql_count_open_journal_entries(db: SqlDb, out: Slice[CountOpenJournalE
 extern fn sql_list_rules_all(db: SqlDb, out: Slice[Rules], capacity: u32) u32;
 extern fn sql_seed_rule(name: string, when_expr: string, clear_expr: string, for_s: string, cooldown_s: string, do_actions: string, else_actions: string, origin: string, db: SqlDb) u32;
 extern fn sql_update_preset_rule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, name: string, db: SqlDb) u32;
+extern fn sql_get_rule(id: i64, db: SqlDb, out: Slice[Rules], capacity: u32) u32;
+extern fn sql_update_rule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, id: i64, db: SqlDb) u32;
+extern fn sql_put_rule_preset(name: string, when_expr: string, clear_expr: string, for_s: string, cooldown_s: string, do_actions: string, else_actions: string, db: SqlDb) u32;
+extern fn sql_reset_rule_to_preset(id: i64, db: SqlDb) u32;
 extern fn sql_set_rule_state(state: string, state_since: i64, last_fired: i64, last_error: string, id: i64, db: SqlDb) u32;
 extern fn sql_set_rule_enabled(enabled: i64, id: i64, db: SqlDb) u32;
 extern fn sql_delete_person_rule(id: i64, db: SqlDb) u32;
@@ -540,6 +544,45 @@ fn SeedRule(name: string, when_expr: string, clear_expr: string, for_s: string, 
 
 fn UpdatePresetRule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, name: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_update_preset_rule(when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, name, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn GetRule(id: i64, db: SqlDb, out: Slice[Rules], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_rule(id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn UpdateRule(when_expr: string, clear_expr: string, for_s: i64, cooldown_s: i64, do_actions: string, else_actions: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_rule(when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn PutRulePreset(name: string, when_expr: string, clear_expr: string, for_s: string, cooldown_s: string, do_actions: string, else_actions: string, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_put_rule_preset(name, when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn ResetRuleToPreset(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_reset_rule_to_preset(id, db)
     let failure: string = sql_failed(db)
     if failure != "" {
         return Err[u32, SqlError](SqlError{ failure, -1 })

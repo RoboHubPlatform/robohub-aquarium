@@ -198,6 +198,19 @@ CREATE TABLE IF NOT EXISTS rules (
     last_error    TEXT NOT NULL DEFAULT ''
 );
 
+-- What the presets say each preset rule is, kept as they say it: a rule a person
+-- edited (origin 'edited') is no longer changed by the presets, and is put back
+-- from here when they ask for the preset again.
+CREATE TABLE IF NOT EXISTS rule_presets (
+    name          TEXT PRIMARY KEY,
+    when_expr     TEXT NOT NULL,
+    clear_expr    TEXT NOT NULL DEFAULT '',
+    for_s         INTEGER NOT NULL DEFAULT 0,
+    cooldown_s    INTEGER NOT NULL DEFAULT 0,
+    do_actions    TEXT NOT NULL DEFAULT '',
+    else_actions  TEXT NOT NULL DEFAULT ''
+);
+
 -- A mode: a named change for a while. Starting it runs do_actions and
 -- suspends the rules named in suspends (comma-separated); it ends after
 -- duration_s (0: when someone ends it) and runs end_actions.

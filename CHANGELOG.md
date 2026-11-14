@@ -204,3 +204,7 @@ The Devices page is the inventory's (inventory 0.3.0): the aquarium says which r
 ## [0.6.5] - 2026-11-14
 
 Reading an item's capability or a published value — what every rule does every few seconds — is a lookup, not a list of every item (inventory 0.3.1, appapi 0.1.4).
+
+## [0.6.6] - 2026-11-14
+
+Rules can be edited on the Rules page, a preset rule put back as its preset (rules 0.1.8).

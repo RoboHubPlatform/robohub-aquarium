@@ -1661,6 +1661,200 @@
       "affected": true
     },
     {
+      "name": "sql_get_rule",
+      "sql": "SELECT id, name, enabled, when_expr, clear_expr, for_s, cooldown_s, do_actions,\n       else_actions, origin, state, state_since, last_fired, last_error\nFROM rules WHERE id = ?1",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "Rules",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "name",
+          "column": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "enabled",
+          "column": "enabled",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "whenExpr",
+          "column": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clearExpr",
+          "column": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "forS",
+          "column": "for_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "cooldownS",
+          "column": "cooldown_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "doActions",
+          "column": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "elseActions",
+          "column": "else_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "origin",
+          "column": "origin",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "state",
+          "column": "state",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "stateSince",
+          "column": "state_since",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lastFired",
+          "column": "last_fired",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "lastError",
+          "column": "last_error",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_update_rule",
+      "sql": "UPDATE rules SET when_expr = ?1, clear_expr = ?2, for_s = ?3,\n    cooldown_s = ?4, do_actions = ?5, else_actions = ?6,\n    origin = CASE WHEN origin = 'preset' THEN 'edited' ELSE origin END,\n    state = 'idle', last_error = ''\nWHERE id = ?7",
+      "parameters": [
+        {
+          "name": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "for_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "cooldown_s",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "else_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_put_rule_preset",
+      "sql": "INSERT OR REPLACE INTO rule_presets (name, when_expr, clear_expr, for_s, cooldown_s, do_actions, else_actions)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "when_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "clear_expr",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "for_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "cooldown_s",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "do_actions",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "else_actions",
+          "goType": "string",
+          "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_reset_rule_to_preset",
+      "sql": "UPDATE rules SET\n    when_expr = (SELECT p.when_expr FROM rule_presets p WHERE p.name = rules.name),\n    clear_expr = (SELECT p.clear_expr FROM rule_presets p WHERE p.name = rules.name),\n    for_s = (SELECT p.for_s FROM rule_presets p WHERE p.name = rules.name),\n    cooldown_s = (SELECT p.cooldown_s FROM rule_presets p WHERE p.name = rules.name),\n    do_actions = (SELECT p.do_actions FROM rule_presets p WHERE p.name = rules.name),\n    else_actions = (SELECT p.else_actions FROM rule_presets p WHERE p.name = rules.name),\n    origin = 'preset', state = 'idle', last_error = ''\nWHERE id = ?1 AND origin = 'edited'\n  AND EXISTS (SELECT 1 FROM rule_presets p WHERE p.name = rules.name)",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
       "name": "sql_set_rule_state",
       "sql": "UPDATE rules SET state = ?1, state_since = ?2, last_fired = ?3,\n    last_error = ?4\nWHERE id = ?5",
       "parameters": [

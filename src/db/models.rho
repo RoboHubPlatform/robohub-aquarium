@@ -404,6 +404,17 @@ struct StockMovements {
     createdAt: string
 }
 
+// What the presets say each preset rule is, kept as they say it: a rule a person edited (origin 'edited') is no longer changed by the presets, and is put back from here when they ask for the preset again.
+struct RulePresets {
+    name: string
+    whenExpr: string
+    clearExpr: string
+    forS: i64
+    cooldownS: i64
+    doActions: string
+    elseActions: string
+}
+
 // One completion of a chore, with the note a person left.
 struct ChoreCompletions {
     id: i64
