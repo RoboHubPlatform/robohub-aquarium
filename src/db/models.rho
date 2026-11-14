@@ -56,6 +56,7 @@ struct Categories {
     kind: string
     capabilities: string
     uses: string
+    origin: string
 }
 
 struct ListItemsRow {

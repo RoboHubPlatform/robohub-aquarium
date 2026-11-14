@@ -163,5 +163,13 @@
   "water.targets_saved": "Ținte salvate.",
   "water.title": "Apă și chimie",
   "water.trend": "Tendință",
-  "water.value": "Valoare"
+  "water.value": "Valoare",
+  "aqua.delete": "Șterge",
+  "water.delete_test_confirm": "Ștergi această măsurătoare? Acțiunea nu poate fi anulată.",
+  "water.delete_change_confirm": "Ștergi această schimbare de apă? Acțiunea nu poate fi anulată.",
+  "water.test_deleted": "Măsurătoare ștearsă.",
+  "water.change_deleted": "Schimbare de apă ștearsă.",
+  "dosing.delete_confirm": "Ștergi această dozare? Cantitatea luată este pusă înapoi în stocul produsului.",
+  "dosing.deleted": "Dozare ștearsă; stocul a fost refăcut.",
+  "dosing.not_found": "Dozarea nu a fost găsită."
 }

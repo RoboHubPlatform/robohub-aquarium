@@ -50,6 +50,13 @@ extern fn sql_bind_capability(item_id: string, capability: string, source: strin
 extern fn sql_unbind_capability(item_id: i64, capability: string, db: SqlDb) u32;
 extern fn sql_set_item_handle(handle: string, id: i64, db: SqlDb) u32;
 extern fn sql_clear_item_handle(handle: string, id: string, db: SqlDb) u32;
+extern fn sql_rename_category(name: string, id: i64, db: SqlDb) u32;
+extern fn sql_delete_category(id: i64, db: SqlDb) u32;
+extern fn sql_detach_category_expenses(category_id: i64, db: SqlDb) u32;
+extern fn sql_delete_item_bindings(item_id: i64, db: SqlDb) u32;
+extern fn sql_delete_item_movements(item_id: i64, db: SqlDb) u32;
+extern fn sql_detach_item_expenses(item_id: i64, db: SqlDb) u32;
+extern fn sql_delete_item(id: i64, db: SqlDb) u32;
 extern fn sql_insert_journal_entry(at: string, level: string, kind: string, subject: string, actor: string, message: string, db: SqlDb) u32;
 extern fn sql_list_journal_entries(since: string, level: string, kind: string, db: SqlDb, out: Slice[JournalEntries], capacity: u32) u32;
 extern fn sql_list_open_journal_entries(db: SqlDb, out: Slice[JournalEntries], capacity: u32) u32;
@@ -85,6 +92,9 @@ extern fn sql_list_completions(db: SqlDb, out: Slice[ListCompletionsRow], capaci
 extern fn sql_set_chore_links(runtime_of: string, consumes: string, consumes_milli: i64, title: string, db: SqlDb) u32;
 extern fn sql_set_chore_runtime_seen(runtime_seen: i64, id: i64, db: SqlDb) u32;
 extern fn sql_seed_chore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: string, usage_interval_hours: string, grace_hours: string, priority: string, next_due_epoch: string, db: SqlDb) u32;
+extern fn sql_update_chore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: i64, usage_interval_hours: i64, grace_hours: i64, priority: string, next_due_epoch: i64, runtime_of: string, consumes: string, consumes_milli: i64, id: i64, db: SqlDb) u32;
+extern fn sql_delete_chore_completions(chore_id: i64, db: SqlDb) u32;
+extern fn sql_delete_chore(id: i64, db: SqlDb) u32;
 extern fn sql_insert_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) u32;
 extern fn sql_list_widgets(db: SqlDb, out: Slice[Widgets], capacity: u32) u32;
 extern fn sql_update_widget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: i64, decimals: i64, id: i64, db: SqlDb) u32;
@@ -113,6 +123,10 @@ extern fn sql_list_livestock(tank_id: i64, db: SqlDb, out: Slice[AquariumLivesto
 extern fn sql_record_loss(id: i64, db: SqlDb) u32;
 extern fn sql_list_legacy_events(db: SqlDb, out: Slice[SystemEvents], capacity: u32) u32;
 extern fn sql_resolve_all_journal(db: SqlDb) u32;
+extern fn sql_delete_test(id: i64, tank_id: i64, db: SqlDb) u32;
+extern fn sql_delete_water_change(id: i64, tank_id: i64, db: SqlDb) u32;
+extern fn sql_get_dose(id: i64, tank_id: i64, db: SqlDb, out: Slice[AquariumDoses], capacity: u32) u32;
+extern fn sql_delete_dose(id: i64, tank_id: i64, db: SqlDb) u32;
 fn ListAppapiValues(db: SqlDb, out: Slice[AppapiValues], capacity: u32) Result[u32, SqlError] {
     if capacity == 0 {
         return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
@@ -436,6 +450,69 @@ fn SetItemHandle(handle: string, id: i64, db: SqlDb) Result[u32, SqlError] {
 
 fn ClearItemHandle(handle: string, id: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_clear_item_handle(handle, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn RenameCategory(name: string, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_rename_category(name, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteCategory(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_category(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DetachCategoryExpenses(category_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_detach_category_expenses(category_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteItemBindings(item_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_item_bindings(item_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteItemMovements(item_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_item_movements(item_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DetachItemExpenses(item_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_detach_item_expenses(item_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteItem(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_item(id, db)
     let failure: string = sql_failed(db)
     if failure != "" {
         return Err[u32, SqlError](SqlError{ failure, -1 })
@@ -773,6 +850,33 @@ fn SeedChore(title: string, description: string, schedule_kind: string, schedule
     return Ok[u32, SqlError](changed)
 }
 
+fn UpdateChore(title: string, description: string, schedule_kind: string, schedule_value: string, interval_hours: i64, usage_interval_hours: i64, grace_hours: i64, priority: string, next_due_epoch: i64, runtime_of: string, consumes: string, consumes_milli: i64, id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_update_chore(title, description, schedule_kind, schedule_value, interval_hours, usage_interval_hours, grace_hours, priority, next_due_epoch, runtime_of, consumes, consumes_milli, id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteChoreCompletions(chore_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_chore_completions(chore_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteChore(id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_chore(id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
 fn InsertWidget(title: string, kind: string, source_kind: string, source: string, method: string, unit: string, points: string, position: string, size: string, decimals: string, created_epoch: string, db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_insert_widget(title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch, db)
     let failure: string = sql_failed(db)
@@ -1048,6 +1152,45 @@ fn ListLegacyEvents(db: SqlDb, out: Slice[SystemEvents], capacity: u32) Result[u
 
 fn ResolveAllJournal(db: SqlDb) Result[u32, SqlError] {
     let changed: u32 = sql_resolve_all_journal(db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteTest(id: i64, tank_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_test(id, tank_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn DeleteWaterChange(id: i64, tank_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_water_change(id, tank_id, db)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](changed)
+}
+
+fn GetDose(id: i64, tank_id: i64, db: SqlDb, out: Slice[AquariumDoses], capacity: u32) Result[u32, SqlError] {
+    if capacity == 0 {
+        return Err[u32, SqlError](SqlError{ "no room for rows", -1 })
+    }
+    let wrote: u32 = sql_get_dose(id, tank_id, db, out, capacity)
+    let failure: string = sql_failed(db)
+    if failure != "" {
+        return Err[u32, SqlError](SqlError{ failure, -1 })
+    }
+    return Ok[u32, SqlError](wrote)
+}
+
+fn DeleteDose(id: i64, tank_id: i64, db: SqlDb) Result[u32, SqlError] {
+    let changed: u32 = sql_delete_dose(id, tank_id, db)
     let failure: string = sql_failed(db)
     if failure != "" {
         return Err[u32, SqlError](SqlError{ failure, -1 })

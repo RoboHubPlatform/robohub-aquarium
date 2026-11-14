@@ -266,7 +266,7 @@
     },
     {
       "name": "sql_list_categories",
-      "sql": "SELECT id, name, kind, capabilities, uses FROM categories ORDER BY name",
+      "sql": "SELECT id, name, kind, capabilities, uses, origin FROM categories ORDER BY name",
       "result": "Categories",
       "fields": [
         {
@@ -298,12 +298,18 @@
           "column": "uses",
           "goType": "string",
           "text": true
+        },
+        {
+          "name": "origin",
+          "column": "origin",
+          "goType": "string",
+          "text": true
         }
       ]
     },
     {
       "name": "sql_seed_category",
-      "sql": "INSERT OR IGNORE INTO categories (name, kind, capabilities, uses)\nVALUES (?1, ?2, ?3, ?4)",
+      "sql": "INSERT OR IGNORE INTO categories (name, kind, capabilities, uses, origin)\nVALUES (?1, ?2, ?3, ?4, 'preset')",
       "parameters": [
         {
           "name": "name",
@@ -330,7 +336,7 @@
     },
     {
       "name": "sql_update_category_preset",
-      "sql": "UPDATE categories SET kind = ?1, capabilities = ?2, uses = ?3\nWHERE name = ?4",
+      "sql": "UPDATE categories SET kind = ?1, capabilities = ?2, uses = ?3, origin = 'preset'\nWHERE name = ?4",
       "parameters": [
         {
           "name": "kind",
@@ -1202,6 +1208,95 @@
           "name": "id",
           "goType": "string",
           "text": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_rename_category",
+      "sql": "UPDATE categories SET name = ?1 WHERE id = ?2 AND origin = 'person'",
+      "parameters": [
+        {
+          "name": "name",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_category",
+      "sql": "DELETE FROM categories WHERE id = ?1 AND origin = 'person'\n  AND NOT EXISTS (SELECT 1 FROM items WHERE items.category_id = categories.id)",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_detach_category_expenses",
+      "sql": "UPDATE expenses SET category_id = NULL WHERE category_id = ?1",
+      "parameters": [
+        {
+          "name": "category_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_item_bindings",
+      "sql": "DELETE FROM item_bindings WHERE item_id = ?1",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_item_movements",
+      "sql": "DELETE FROM stock_movements WHERE item_id = ?1",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_detach_item_expenses",
+      "sql": "UPDATE expenses SET item_id = NULL WHERE item_id = ?1",
+      "parameters": [
+        {
+          "name": "item_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_item",
+      "sql": "DELETE FROM items WHERE id = ?1",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
         }
       ],
       "affected": true
@@ -2508,6 +2603,102 @@
       "affected": true
     },
     {
+      "name": "sql_update_chore",
+      "sql": "UPDATE chores SET title = ?1, description = ?2, schedule_kind = ?3,\n    schedule_value = ?4, interval_hours = ?5,\n    usage_interval_hours = ?6, grace_hours = ?7,\n    priority = ?8, next_due_epoch = ?9, runtime_of = ?10,\n    consumes = ?11, consumes_milli = ?12\nWHERE id = ?13",
+      "parameters": [
+        {
+          "name": "title",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "description",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "schedule_kind",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "schedule_value",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "interval_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "usage_interval_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "grace_hours",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "priority",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "next_due_epoch",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "runtime_of",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "consumes",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "consumes_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_chore_completions",
+      "sql": "DELETE FROM chore_completions WHERE chore_id = ?1",
+      "parameters": [
+        {
+          "name": "chore_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_chore",
+      "sql": "DELETE FROM chores WHERE id = ?1",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
       "name": "sql_insert_widget",
       "sql": "INSERT INTO widgets (title, kind, source_kind, source, method, unit, points, position, size, decimals, created_epoch)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
       "parameters": [
@@ -3572,6 +3763,118 @@
     {
       "name": "sql_resolve_all_journal",
       "sql": "UPDATE journal_entries SET resolved_at = at WHERE resolved_at = 0 AND actor = 'system' AND subject = ''",
+      "affected": true
+    },
+    {
+      "name": "sql_delete_test",
+      "sql": "DELETE FROM aquarium_tests WHERE id = ?1 AND tank_id = ?2",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_delete_water_change",
+      "sql": "DELETE FROM aquarium_water_changes WHERE id = ?1 AND tank_id = ?2",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "affected": true
+    },
+    {
+      "name": "sql_get_dose",
+      "sql": "SELECT id, tank_id, product, amount_milli, unit, at, note FROM aquarium_doses WHERE id = ?1 AND tank_id = ?2",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
+      "result": "AquariumDoses",
+      "fields": [
+        {
+          "name": "id",
+          "column": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tankId",
+          "column": "tank_id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "product",
+          "column": "product",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "amountMilli",
+          "column": "amount_milli",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "unit",
+          "column": "unit",
+          "goType": "string",
+          "text": true
+        },
+        {
+          "name": "at",
+          "column": "at",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "note",
+          "column": "note",
+          "goType": "string",
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "sql_delete_dose",
+      "sql": "DELETE FROM aquarium_doses WHERE id = ?1 AND tank_id = ?2",
+      "parameters": [
+        {
+          "name": "id",
+          "goType": "int64",
+          "integer": true
+        },
+        {
+          "name": "tank_id",
+          "goType": "int64",
+          "integer": true
+        }
+      ],
       "affected": true
     }
   ]

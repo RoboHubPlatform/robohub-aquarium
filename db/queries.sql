@@ -64,3 +64,16 @@ SELECT id, severity, kind, message, created_epoch FROM system_events ORDER BY id
 
 -- name: resolve_all_journal
 UPDATE journal_entries SET resolved_at = at WHERE resolved_at = 0 AND actor = 'system' AND subject = '';
+
+-- A record entered by mistake, deleted from its tank's history.
+-- name: delete_test
+DELETE FROM aquarium_tests WHERE id = :id AND tank_id = :tank_id;
+
+-- name: delete_water_change
+DELETE FROM aquarium_water_changes WHERE id = :id AND tank_id = :tank_id;
+
+-- name: get_dose
+SELECT id, tank_id, product, amount_milli, unit, at, note FROM aquarium_doses WHERE id = :id AND tank_id = :tank_id;
+
+-- name: delete_dose
+DELETE FROM aquarium_doses WHERE id = :id AND tank_id = :tank_id;

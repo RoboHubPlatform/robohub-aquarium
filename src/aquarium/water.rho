@@ -207,15 +207,16 @@ fn aqua_history_rows(req: Request, tank: AquaTank) string {
         out = out + "<tr><td><time>" + escape_html(journal_time(row.at, offset)) + "</time></td><td>" +
             escape_html(aqua_parameter_label(row.parameter)) + "</td><td" + css + ">" +
             escape_html(milli_format(row.valueMilli) + " " + aqua_parameter_unit(row.parameter)) + "</td><td>" +
-            escape_html(row.kit) + "</td><td>" + escape_html(row.note) + "</td></tr>\n"
+            escape_html(row.kit) + "</td><td>" + escape_html(row.note) + "</td><td>" +
+            aqua_delete_button(req, "/water/test/delete", row.id, tank, "water.delete_test_confirm") + "</td></tr>\n"
         i = i + 1
     }
     if out == "" {
-        out = "<tr><td colspan=\"5\">" + i18n_t(req, "water.no_tests") + "</td></tr>"
+        out = "<tr><td colspan=\"6\">" + i18n_t(req, "water.no_tests") + "</td></tr>"
     }
     return "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "water.parameter") +
         "</th><th>" + i18n_t(req, "water.value") + "</th><th>" + i18n_t(req, "water.kit") + "</th><th>" +
-        i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + out + "</tbody></table>"
+        i18n_t(req, "water.note") + "</th><th></th></tr></thead><tbody>" + out + "</tbody></table>"
 }
 
 fn aqua_option_list(choices: string, selected: string, empty: string) string {
@@ -312,13 +313,14 @@ fn aqua_changes_tab(req: Request, tank: AquaTank) string {
                 let litres: u32 = (tank.volume * u32(changes[i].percent)) / 100
                 rows = rows + "<tr><td><time>" + escape_html(journal_time(changes[i].at, offset)) + "</time></td><td>" +
                     rho_int_to_str(u32(changes[i].percent)) + " % · " + rho_int_to_str(litres) + " L</td><td>" +
-                    escape_html(changes[i].note) + "</td></tr>\n"
+                    escape_html(changes[i].note) + "</td><td>" +
+                    aqua_delete_button(req, "/water/change/delete", changes[i].id, tank, "water.delete_change_confirm") + "</td></tr>\n"
                 i = i + 1
             }
         }
     }
     if rows == "" {
-        rows = "<tr><td colspan=\"3\">" + i18n_t(req, "water.no_changes") + "</td></tr>"
+        rows = "<tr><td colspan=\"4\">" + i18n_t(req, "water.no_changes") + "</td></tr>"
     }
     return "<form method=\"post\" action=\"/water/change\" class=\"aq-form inline-form\">" + forms_csrf_field() +
         "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
@@ -326,7 +328,7 @@ fn aqua_changes_tab(req: Request, tank: AquaTank) string {
         "<label>" + i18n_t(req, "water.note") + "<input name=\"note\"></label>" +
         "<button class=\"primary\">" + i18n_t(req, "water.log_change") + "</button></form>" +
         "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "water.amount") +
-        "</th><th>" + i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + rows + "</tbody></table>"
+        "</th><th>" + i18n_t(req, "water.note") + "</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
 }
 
 /* -------------------------------------------------------------------------- */
@@ -481,4 +483,35 @@ fn water_change(req: Request) Response {
     // The water change is the water-change chore done.
     ignore_bool(scheduler_complete_title(aqua_chore_title(tank, "Water change"), rho_int_to_str(percent) + " %"))
     return aqua_after_post("/water", tank, "changes", i18n_t(req, "water.change_logged"))
+}
+
+// water_test_delete deletes a reading entered by mistake.
+fn water_test_delete(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) {
+        return aqua_after_post("/water", tank, "history", i18n_t(req, "form.expired"))
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if opened.is_ok {
+        aqua_ignore(DeleteTest(i64_from_str(aqua_form(body, "id")), i64(tank.id), opened.ok))
+        sql_close(opened.ok)
+    }
+    journal_info("water_test", tank.handle, "person", "a reading was deleted")
+    return aqua_after_post("/water", tank, "history", i18n_t(req, "water.test_deleted"))
+}
+
+fn water_change_delete(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) {
+        return aqua_after_post("/water", tank, "changes", i18n_t(req, "form.expired"))
+    }
+    let opened: Result[SqlDb, string] = aqua_open()
+    if opened.is_ok {
+        aqua_ignore(DeleteWaterChange(i64_from_str(aqua_form(body, "id")), i64(tank.id), opened.ok))
+        sql_close(opened.ok)
+    }
+    journal_info("water_change", tank.handle, "person", "a water change was deleted")
+    return aqua_after_post("/water", tank, "changes", i18n_t(req, "water.change_deleted"))
 }

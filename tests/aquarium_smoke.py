@@ -223,6 +223,26 @@ def main() -> int:
             if completed == 0:
                 raise AssertionError("the water-change chore was not completed")
 
+            # A record entered by mistake is deleted from its row; a deleted dose
+            # puts its stock back.
+            t = str(tank[0])
+            post(base, "/dosing", {"tank": t, "product": "fert", "amount": "2"})
+            with sqlite3.connect(db) as conn:
+                dose = conn.execute("SELECT MAX(id) FROM aquarium_doses").fetchone()[0]
+                reading = conn.execute("SELECT MAX(id) FROM aquarium_tests").fetchone()[0]
+                change = conn.execute("SELECT MAX(id) FROM aquarium_water_changes").fetchone()[0]
+            assert_contains(post(base, "/dosing/delete", {"tank": t, "id": str(dose)}), ["Dose deleted"], "a dose deleted")
+            assert_contains(post(base, "/water/test/delete", {"tank": t, "id": str(reading)}), ["Reading deleted"], "a reading deleted")
+            assert_contains(post(base, "/water/change/delete", {"tank": t, "id": str(change)}), ["Water change deleted"], "a change deleted")
+            with sqlite3.connect(db) as conn:
+                left = conn.execute("SELECT quantity_milli FROM items WHERE handle='fert'").fetchone()[0]
+                gone = [conn.execute(q, (i,)).fetchone()[0] for q, i in (
+                    ("SELECT COUNT(*) FROM aquarium_doses WHERE id=?", dose),
+                    ("SELECT COUNT(*) FROM aquarium_tests WHERE id=?", reading),
+                    ("SELECT COUNT(*) FROM aquarium_water_changes WHERE id=?", change))]
+            if left != 95000 or gone != [0, 0, 0]:
+                raise AssertionError(f"after the deletes: fertiliser {left}, still there {gone}")
+
             # Livestock, and a loss.
             post(base, "/livestock", {"tank": str(tank[0]), "kind": "fish", "species": "Paracheirodon innesi", "count": "12"})
             with sqlite3.connect(db) as conn:

@@ -216,3 +216,7 @@ The page an equipment switch returns to is checked by `i18n_safe_next`: a path o
 ## [0.6.8] - 2026-11-14
 
 Uses the toolchain's `i64_to_str` and `str_field` instead of its own copies, and the modules' single rule for where data lives (rho 0.8.0).
+
+## [0.6.9] - 2026-11-14
+
+A water test, a water change or a dose entered by mistake can be deleted from its row, after a confirmation; deleting a dose puts what it took back on the product's stock.

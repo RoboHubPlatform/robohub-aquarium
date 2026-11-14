@@ -163,5 +163,13 @@
   "water.targets_saved": "Targets saved.",
   "water.title": "Water & chemistry",
   "water.trend": "Trend",
-  "water.value": "Value"
+  "water.value": "Value",
+  "aqua.delete": "Delete",
+  "water.delete_test_confirm": "Delete this reading? This cannot be undone.",
+  "water.delete_change_confirm": "Delete this water change? This cannot be undone.",
+  "water.test_deleted": "Reading deleted.",
+  "water.change_deleted": "Water change deleted.",
+  "dosing.delete_confirm": "Delete this dose? What it took is put back on the product's stock.",
+  "dosing.deleted": "Dose deleted; its stock was put back.",
+  "dosing.not_found": "That dose was not found."
 }

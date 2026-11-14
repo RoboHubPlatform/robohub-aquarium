@@ -58,12 +58,16 @@ CREATE TABLE IF NOT EXISTS categories (
     name         TEXT NOT NULL UNIQUE,
     kind         TEXT NOT NULL DEFAULT 'consumable',
     capabilities TEXT NOT NULL DEFAULT '',
-    uses         TEXT NOT NULL DEFAULT ''
+    uses         TEXT NOT NULL DEFAULT '',
+    origin       TEXT NOT NULL DEFAULT 'person'
 );
 
 ALTER TABLE categories ADD COLUMN kind TEXT NOT NULL DEFAULT 'consumable';
 ALTER TABLE categories ADD COLUMN capabilities TEXT NOT NULL DEFAULT '';
 ALTER TABLE categories ADD COLUMN uses TEXT NOT NULL DEFAULT '';
+-- 'preset' for a category the application's presets keep (its name is what the
+-- application reads), 'person' for one a person added and may rename or delete.
+ALTER TABLE categories ADD COLUMN origin TEXT NOT NULL DEFAULT 'person';
 
 -- What is on hand, how much of it, and when to reorder.
 CREATE TABLE IF NOT EXISTS items (

@@ -42,13 +42,14 @@ fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
                 }
                 rows = rows + "<tr><td><time>" + escape_html(journal_time(doses[i].at, offset)) + "</time></td><td>" +
                     escape_html(product) + "</td><td class=\"num\">" + escape_html(milli_format(doses[i].amountMilli) + " " + doses[i].unit) +
-                    "</td><td>" + escape_html(doses[i].note) + "</td></tr>\n"
+                    "</td><td>" + escape_html(doses[i].note) + "</td><td>" +
+                    aqua_delete_button(req, "/dosing/delete", doses[i].id, tank, "dosing.delete_confirm") + "</td></tr>\n"
                 i = i + 1
             }
         }
     }
     if rows == "" {
-        rows = "<tr><td colspan=\"4\">" + i18n_t(req, "dosing.none") + "</td></tr>"
+        rows = "<tr><td colspan=\"5\">" + i18n_t(req, "dosing.none") + "</td></tr>"
     }
     let products: string = inventory_choices("", "consumable")
     let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "dosing.title") + "</h1><p>" + escape_html(tank.name) +
@@ -62,7 +63,7 @@ fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
         "<button class=\"primary\">" + i18n_t(req, "dosing.log") + "</button></form>" +
         "<p class=\"hint\">" + i18n_t(req, "dosing.hint") + "</p>" +
         "<table><thead><tr><th>" + i18n_t(req, "water.taken") + "</th><th>" + i18n_t(req, "dosing.product") + "</th><th>" +
-        i18n_t(req, "dosing.amount") + "</th><th>" + i18n_t(req, "water.note") + "</th></tr></thead><tbody>" + rows +
+        i18n_t(req, "dosing.amount") + "</th><th>" + i18n_t(req, "water.note") + "</th><th></th></tr></thead><tbody>" + rows +
         "</tbody></table></section>"
     return host_shell(req, i18n_t(req, "dosing.title"), body, appshell_toast(message))
 }
@@ -219,4 +220,32 @@ fn livestock_loss(req: Request) Response {
         journal_warning("livestock", tank.handle, "person", "a loss was recorded")
     }
     return aqua_after_post("/livestock", tank, "", i18n_t(req, "livestock.loss_recorded"))
+}
+
+// dosing_delete deletes a dose entered by mistake and puts what it took back
+// on the product's stock.
+fn dosing_delete(req: Request) Response {
+    let body: string = request_body(req)
+    let tank: AquaTank = aqua_tank(rho_int_from_str(aqua_form(body, "tank")))
+    if !forms_csrf_ok(body) {
+        return aqua_after_post("/dosing", tank, "", i18n_t(req, "form.expired"))
+    }
+    let id: i64 = i64_from_str(aqua_form(body, "id"))
+    let opened: Result[SqlDb, string] = aqua_open()
+    if !opened.is_ok {
+        return aqua_after_post("/dosing", tank, "", opened.err)
+    }
+    let rows: AquariumDoses[1]
+    let slice: Slice[AquariumDoses] = Slice[AquariumDoses]{ Ptr[AquariumDoses](&rows[0]), 1 }
+    let got: Result[u32, SqlError] = GetDose(id, i64(tank.id), opened.ok, slice, 1)
+    if !got.is_ok || got.ok == 0 {
+        sql_close(opened.ok)
+        return aqua_after_post("/dosing", tank, "", i18n_t(req, "dosing.not_found"))
+    }
+    let dose: AquariumDoses = rows[0]
+    aqua_ignore(DeleteDose(id, i64(tank.id), opened.ok))
+    sql_close(opened.ok)
+    ignore_bool(inventory_return(dose.product, u32(dose.amountMilli), "dose deleted", "dose:" + tank.handle))
+    journal_info("dose", tank.handle, "person", "a dose of " + dose.product + " was deleted; its stock was put back")
+    return aqua_after_post("/dosing", tank, "", i18n_t(req, "dosing.deleted"))
 }

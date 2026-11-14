@@ -73,6 +73,16 @@ fn aqua_after_line(rest: string) string {
 // page again, by GET, with what happened as its message. A refresh then reloads
 // the page rather than logging the test, using up the kit or completing the chore
 // a second time.
+// aqua_delete_button is a row's delete, asked once before it is done.
+fn aqua_delete_button(req: Request, action: string, id: i64, tank: AquaTank, confirm_key: string) string {
+    return "<form method=\"post\" action=\"" + action + "\" class=\"inline\" onsubmit=\"return confirm(" +
+        escape_html(json_string(i18n_t(req, confirm_key))) + ")\">" + forms_csrf_field() +
+        "<input type=\"hidden\" name=\"id\" value=\"" + i64_to_str(id) + "\">" +
+        "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
+        "<button class=\"quiet\" title=\"" + escape_html(i18n_t(req, "aqua.delete")) + "\">" + escape_html(i18n_t(req, "aqua.delete")) +
+        "</button></form>"
+}
+
 fn aqua_after_post(path: string, tank: AquaTank, tab: string, message: string) Response {
     var target: string = path + "?tank=" + rho_int_to_str(tank.id)
     if tab != "" {
