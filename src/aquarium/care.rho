@@ -36,7 +36,7 @@ fn dosing_page_message(req: Request, tank: AquaTank, message: string) Response {
             var i: u32 = 0
             while i < listed.ok {
                 let named: string = inventory_item_name(doses[i].product)
-                var product: string = aqua_field(named, 0)
+                var product: string = str_field(named, "|", 0)
                 if product == "" {
                     product = doses[i].product
                 }
@@ -79,16 +79,16 @@ fn dosing_add(req: Request) Response {
         return dosing_page_message(req, tank, i18n_t(req, "dosing.need"))
     }
     let named: string = inventory_item_name(product)
-    let unit: string = aqua_field(named, 1)
+    let unit: string = str_field(named, "|", 1)
     let opened: Result[SqlDb, string] = aqua_open()
     if !opened.is_ok {
         return dosing_page_message(req, tank, opened.err)
     }
     let note: string = aqua_form(body, "note")
-    aqua_ignore(InsertDose(rho_int_to_str(tank.id), product, aqua_i64(amount.milli), unit, rho_int_to_str(aqua_now()), note, opened.ok))
+    aqua_ignore(InsertDose(rho_int_to_str(tank.id), product, i64_to_str(amount.milli), unit, rho_int_to_str(aqua_now()), note, opened.ok))
     sql_close(opened.ok)
     let stocked: bool = inventory_consume(product, u32(amount.milli), "dose", "dose:" + tank.handle)
-    journal_info("dose", tank.handle, "person", milli_format(amount.milli) + " " + unit + " " + aqua_field(named, 0))
+    journal_info("dose", tank.handle, "person", milli_format(amount.milli) + " " + unit + " " + str_field(named, "|", 0))
     if !stocked {
         return dosing_page_message(req, tank, i18n_t(req, "dosing.no_stock"))
     }
@@ -156,7 +156,7 @@ fn livestock_page_message(req: Request, tank: AquaTank, message: string) Respons
             one = rho_str_slice(rest, 0, u32(at))
             rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
         }
-        kinds = kinds + "<option value=\"" + aqua_field(one, 0) + "\">" + escape_html(i18n_t(req, aqua_field(one, 1))) + "</option>"
+        kinds = kinds + "<option value=\"" + str_field(one, "|", 0) + "\">" + escape_html(i18n_t(req, str_field(one, "|", 1))) + "</option>"
     }
     let body: string = "<div class=\"ph\"><h1>" + i18n_t(req, "livestock.title") + "</h1><p>" + escape_html(tank.name) +
         " · " + rho_int_to_str(alive) + " " + i18n_t(req, "livestock.animals") + "</p></div>" +

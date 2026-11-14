@@ -212,3 +212,7 @@ Rules can be edited on the Rules page, a preset rule put back as its preset (rul
 ## [0.6.7] - 2026-11-14
 
 The page an equipment switch returns to is checked by `i18n_safe_next`: a path on this application and nothing else.
+
+## [0.6.8] - 2026-11-14
+
+Uses the toolchain's `i64_to_str` and `str_field` instead of its own copies, and the modules' single rule for where data lives (rho 0.8.0).

@@ -53,27 +53,6 @@ fn aqua_now() u32 {
     return rho_now_s()
 }
 
-// aqua_field is the field at an index of a `|`-separated line.
-fn aqua_field(line: string, index: u32) string {
-    var rest: string = line
-    var i: u32 = 0
-    while true {
-        let at: i32 = rho_str_index_of(rest, "|")
-        if i == index {
-            if at < 0 {
-                return rest
-            }
-            return rho_str_slice(rest, 0, u32(at))
-        }
-        if at < 0 {
-            return ""
-        }
-        rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
-        i = i + 1
-    }
-    return ""
-}
-
 fn aqua_line(rest: string) string {
     let at: i32 = rho_str_index_of(rest, "\n")
     if at < 0 {
@@ -116,24 +95,6 @@ fn aqua_number(text: string) AquaNumber {
     return AquaNumber{ milli_valid(text), milli_parse(text) }
 }
 
-fn aqua_i64(value: i64) string {
-    if value == 0 {
-        return "0"
-    }
-    var rest: i64 = value
-    var sign: string = ""
-    if rest < 0 {
-        sign = "-"
-        rest = 0 - rest
-    }
-    var out: string = ""
-    while rest > 0 {
-        out = rho_str_slice("0123456789", u32(rest - (rest / 10) * 10), 1) + out
-        rest = rest / 10
-    }
-    return sign + out
-}
-
 // aqua_round writes a reading to so many decimals, rounding half away from zero:
 // a probe's 24.873 is 24.9.
 fn aqua_round(text: string, places: u32) string {
@@ -165,7 +126,7 @@ fn aqua_parameter_line(key: string) string {
     while rest != "" {
         let line: string = aqua_line(rest)
         rest = aqua_after_line(rest)
-        if rho_str_eq(aqua_field(line, 0), key) {
+        if rho_str_eq(str_field(line, "|", 0), key) {
             return line
         }
     }
@@ -177,11 +138,11 @@ fn aqua_parameter_label(key: string) string {
     if line == "" {
         return key
     }
-    return aqua_field(line, 1)
+    return str_field(line, "|", 1)
 }
 
 fn aqua_parameter_unit(key: string) string {
-    return aqua_field(aqua_parameter_line(key), 2)
+    return str_field(aqua_parameter_line(key), "|", 2)
 }
 
 fn aqua_parameter_choices() string {
@@ -194,7 +155,7 @@ fn aqua_parameter_choices() string {
             if out != "" {
                 out = out + ","
             }
-            out = out + aqua_field(line, 0) + "|" + aqua_field(line, 1)
+            out = out + str_field(line, "|", 0) + "|" + str_field(line, "|", 1)
         }
     }
     return out
@@ -391,7 +352,7 @@ fn aqua_seed_targets(tank_id: u32, kind: string, replace: bool) void {
     let db: SqlDb = opened.ok
     var rest: string = AQUA_PARAMETERS
     while rest != "" {
-        let key: string = aqua_field(aqua_line(rest), 0)
+        let key: string = str_field(aqua_line(rest), "|", 0)
         rest = aqua_after_line(rest)
         let band: string = str_trim(yaml.value(path, "types." + kind + "." + key))
         let dash: i32 = rho_str_index_of(band, "-")
@@ -400,9 +361,9 @@ fn aqua_seed_targets(tank_id: u32, kind: string, replace: bool) void {
             let high: AquaNumber = aqua_number(rho_str_slice(band, u32(dash) + 1, u32(rho_strlen(band)) - u32(dash) - 1))
             if low.ok && high.ok {
                 if replace {
-                    aqua_ignore(PutTarget(rho_int_to_str(tank_id), key, aqua_i64(low.milli), aqua_i64(high.milli), db))
+                    aqua_ignore(PutTarget(rho_int_to_str(tank_id), key, i64_to_str(low.milli), i64_to_str(high.milli), db))
                 } else {
-                    aqua_ignore(SeedTarget(rho_int_to_str(tank_id), key, aqua_i64(low.milli), aqua_i64(high.milli), db))
+                    aqua_ignore(SeedTarget(rho_int_to_str(tank_id), key, i64_to_str(low.milli), i64_to_str(high.milli), db))
                 }
             }
         }

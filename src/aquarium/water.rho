@@ -34,7 +34,7 @@ fn aqua_record_test(tank: AquaTank, parameter: string, milli: i64, kit: string, 
         return opened.err
     }
     let now: u32 = aqua_now()
-    let kept: Result[u32, SqlError] = InsertTest(rho_int_to_str(tank.id), parameter, aqua_i64(milli),
+    let kept: Result[u32, SqlError] = InsertTest(rho_int_to_str(tank.id), parameter, i64_to_str(milli),
         rho_int_to_str(now), kit, source, note, opened.ok)
     sql_close(opened.ok)
     if !kept.is_ok {
@@ -116,7 +116,7 @@ fn aqua_spark(tests: AquariumTests[500], test_count: u32, parameter: string, ton
             let v: AquaNumber = aqua_number(line)
             let x: u32 = (n * 90) / (count - 1)
             let y: i64 = 18 - (v.milli - low) * 16 / span
-            points = points + rho_int_to_str(x) + "," + aqua_i64(y) + " "
+            points = points + rho_int_to_str(x) + "," + i64_to_str(y) + " "
             n = n + 1
         }
     }
@@ -136,7 +136,7 @@ fn aqua_latest_rows(req: Request, tank: AquaTank) string {
     while rest != "" {
         let line: string = aqua_line(rest)
         rest = aqua_after_line(rest)
-        let key: string = aqua_field(line, 0)
+        let key: string = str_field(line, "|", 0)
         if key == "" {
             continue
         }
@@ -178,9 +178,9 @@ fn aqua_latest_rows(req: Request, tank: AquaTank) string {
         }
         var shown: string = "—"
         if value != "" {
-            shown = escape_html(value + " " + aqua_field(line, 2))
+            shown = escape_html(value + " " + str_field(line, "|", 2))
         }
-        out = out + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td" + css + ">" + shown +
+        out = out + "<tr><td>" + escape_html(str_field(line, "|", 1)) + "</td><td" + css + ">" + shown +
             "</td><td>" + escape_html(aqua_band_text(band)) + "</td><td>" + escape_html(taken) + "</td><td>" +
             escape_html(source) + "</td><td>" + aqua_spark(tests, test_count, key, tone) + "</td></tr>\n"
     }
@@ -230,13 +230,13 @@ fn aqua_option_list(choices: string, selected: string, empty: string) string {
             one = rho_str_slice(rest, 0, u32(at))
             rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
         }
-        let value: string = aqua_field(one, 0)
+        let value: string = str_field(one, "|", 0)
         if value != "" {
             var mark: string = ""
             if rho_str_eq(value, selected) {
                 mark = " selected"
             }
-            out = out + "<option value=\"" + escape_html(value) + "\"" + mark + ">" + escape_html(aqua_field(one, 1)) + "</option>"
+            out = out + "<option value=\"" + escape_html(value) + "\"" + mark + ">" + escape_html(str_field(one, "|", 1)) + "</option>"
         }
     }
     return out
@@ -251,13 +251,13 @@ fn aqua_test_form(req: Request, tank: AquaTank) string {
     while rest != "" {
         let line: string = aqua_line(rest)
         rest = aqua_after_line(rest)
-        let key: string = aqua_field(line, 0)
+        let key: string = str_field(line, "|", 0)
         if key == "" {
             continue
         }
-        rows = rows + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td><input name=\"v_" + key +
+        rows = rows + "<tr><td>" + escape_html(str_field(line, "|", 1)) + "</td><td><input name=\"v_" + key +
             "\" inputmode=\"decimal\" placeholder=\"" + escape_html(aqua_band_text(aqua_band(tank.id, key))) +
-            "\"> " + escape_html(aqua_field(line, 2)) + "</td><td><select name=\"k_" + key + "\">" +
+            "\"> " + escape_html(str_field(line, "|", 2)) + "</td><td><select name=\"k_" + key + "\">" +
             aqua_option_list(kits, "", i18n_t(req, "water.no_kit")) + "</select></td></tr>\n"
     }
     return "<form method=\"post\" action=\"/water/test\" class=\"aq-form\">" + forms_csrf_field() +
@@ -274,7 +274,7 @@ fn aqua_targets_form(req: Request, tank: AquaTank) string {
     while rest != "" {
         let line: string = aqua_line(rest)
         rest = aqua_after_line(rest)
-        let key: string = aqua_field(line, 0)
+        let key: string = str_field(line, "|", 0)
         if key == "" {
             continue
         }
@@ -285,9 +285,9 @@ fn aqua_targets_form(req: Request, tank: AquaTank) string {
             low = milli_format(band.low)
             high = milli_format(band.high)
         }
-        rows = rows + "<tr><td>" + escape_html(aqua_field(line, 1)) + "</td><td><input name=\"lo_" + key +
+        rows = rows + "<tr><td>" + escape_html(str_field(line, "|", 1)) + "</td><td><input name=\"lo_" + key +
             "\" value=\"" + escape_html(low) + "\" inputmode=\"decimal\"></td><td><input name=\"hi_" + key +
-            "\" value=\"" + escape_html(high) + "\" inputmode=\"decimal\"></td><td>" + escape_html(aqua_field(line, 2)) + "</td></tr>\n"
+            "\" value=\"" + escape_html(high) + "\" inputmode=\"decimal\"></td><td>" + escape_html(str_field(line, "|", 2)) + "</td></tr>\n"
     }
     return "<form method=\"post\" action=\"/water/targets\" class=\"aq-form\">" + forms_csrf_field() +
         "<input type=\"hidden\" name=\"tank\" value=\"" + rho_int_to_str(tank.id) + "\">" +
@@ -346,11 +346,11 @@ fn aqua_tabs(req: Request, base: string, tabs: string, active: string, tank: Aqu
             rest = rho_str_slice(rest, u32(at) + 1, u32(rho_strlen(rest)) - u32(at) - 1)
         }
         var css: string = ""
-        if rho_str_eq(aqua_field(one, 0), active) {
+        if rho_str_eq(str_field(one, "|", 0), active) {
             css = " class=\"on\""
         }
-        out = out + "<a" + css + " href=\"" + base + "?tab=" + aqua_field(one, 0) + "&tank=" +
-            rho_int_to_str(tank.id) + "\">" + escape_html(i18n_t(req, aqua_field(one, 1))) + "</a>"
+        out = out + "<a" + css + " href=\"" + base + "?tab=" + str_field(one, "|", 0) + "&tank=" +
+            rho_int_to_str(tank.id) + "\">" + escape_html(i18n_t(req, str_field(one, "|", 1))) + "</a>"
     }
     return out + "</nav>"
 }
@@ -396,7 +396,7 @@ fn water_test(req: Request) Response {
     // nothing, so sending it again corrected does not log the rest twice.
     var check: string = AQUA_PARAMETERS
     while check != "" {
-        let key: string = aqua_field(aqua_line(check), 0)
+        let key: string = str_field(aqua_line(check), "|", 0)
         check = aqua_after_line(check)
         let text: string = aqua_form(body, "v_" + key)
         if key != "" && text != "" && !aqua_number(text).ok {
@@ -407,7 +407,7 @@ fn water_test(req: Request) Response {
     var problem: string = ""
     var rest: string = AQUA_PARAMETERS
     while rest != "" {
-        let key: string = aqua_field(aqua_line(rest), 0)
+        let key: string = str_field(aqua_line(rest), "|", 0)
         rest = aqua_after_line(rest)
         let text: string = aqua_form(body, "v_" + key)
         if key != "" && text != "" {
@@ -446,12 +446,12 @@ fn water_targets(req: Request) Response {
     }
     var rest: string = AQUA_PARAMETERS
     while rest != "" {
-        let key: string = aqua_field(aqua_line(rest), 0)
+        let key: string = str_field(aqua_line(rest), "|", 0)
         rest = aqua_after_line(rest)
         let low: AquaNumber = aqua_number(aqua_form(body, "lo_" + key))
         let high: AquaNumber = aqua_number(aqua_form(body, "hi_" + key))
         if key != "" && low.ok && high.ok && low.milli <= high.milli {
-            aqua_ignore(PutTarget(rho_int_to_str(tank.id), key, aqua_i64(low.milli), aqua_i64(high.milli), opened.ok))
+            aqua_ignore(PutTarget(rho_int_to_str(tank.id), key, i64_to_str(low.milli), i64_to_str(high.milli), opened.ok))
         }
     }
     sql_close(opened.ok)

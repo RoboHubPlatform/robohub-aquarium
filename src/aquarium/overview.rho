@@ -300,7 +300,7 @@ fn aqua_temperature_chart(req: Request, tank: AquaTank) string {
             if v.ok {
                 let x: u32 = (n * 300) / (summary.count - 1)
                 let y: i64 = 90 - ((v.milli - low) * 90) / span
-                points = points + rho_int_to_str(x) + "," + aqua_i64(y) + " "
+                points = points + rho_int_to_str(x) + "," + i64_to_str(y) + " "
                 n = n + 1
             }
         }
@@ -309,7 +309,7 @@ fn aqua_temperature_chart(req: Request, tank: AquaTank) string {
     if band.known {
         let top: i64 = 90 - ((band.high - low) * 90) / span
         let bottom: i64 = 90 - ((band.low - low) * 90) / span
-        band_rect = "<rect x=\"0\" y=\"" + aqua_i64(top) + "\" width=\"300\" height=\"" + aqua_i64(bottom - top) + "\" fill=\"var(--teal-soft)\"/>"
+        band_rect = "<rect x=\"0\" y=\"" + i64_to_str(top) + "\" width=\"300\" height=\"" + i64_to_str(bottom - top) + "\" fill=\"var(--teal-soft)\"/>"
     }
     return "<svg class=\"chart\" viewBox=\"0 0 300 90\" preserveAspectRatio=\"none\" role=\"img\" aria-label=\"" +
         escape_html(i18n_t(req, "overview.temperature_24h")) + "\">" + band_rect +
@@ -413,7 +413,7 @@ fn aquarium_home(req: Request) Response {
         if whole < 1 {
             status = status + " · " + i18n_t(req, "overview.water_changed_today")
         } else {
-            status = status + " · " + i18n_t(req, "overview.water_changed") + " " + aqua_i64(whole) + " " + i18n_t(req, "overview.days_ago")
+            status = status + " · " + i18n_t(req, "overview.water_changed") + " " + i64_to_str(whole) + " " + i18n_t(req, "overview.days_ago")
         }
     }
     let equipment: AquaEquipment = aqua_equipment_rows(req, true, "/")
