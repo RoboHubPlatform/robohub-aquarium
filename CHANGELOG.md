@@ -77,7 +77,7 @@ Aquarium signs in through Keeper SSO. The dashboard, widgets and settings are be
 
 Aquarium's dashboard charts use the robohub-mesh telemetry store. A chart bound
 to a Mesh source reads the source's history through the mesh-gateway provider;
-a number reads the latest stored value. The miralis project's temperature chart
+a number reads the latest stored value. A project's temperature chart
 therefore shows a series instead of the local snapshots the widget happened to
 fetch. The Aquarium menu also carries the Keeper link when the keeper started
 the application, with the same ↑ affordance as Mesh.
