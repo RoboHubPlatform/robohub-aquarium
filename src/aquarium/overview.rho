@@ -240,10 +240,8 @@ fn equipment_page(req: Request) Response {
 
 fn equipment_switch(req: Request) Response {
     let body: string = request_body(req)
-    var back: string = aqua_form(body, "back")
-    if !rho_str_starts_with(back, "/") || rho_str_starts_with(back, "//") {
-        back = "/"
-    }
+    // A path on this application and nothing else (no "/\\host", no line break).
+    let back: string = i18n_safe_next(aqua_form(body, "back"))
     if !forms_csrf_ok(body) {
         return redirect(back)
     }

@@ -208,3 +208,7 @@ Reading an item's capability or a published value — what every rule does every
 ## [0.6.6] - 2026-11-14
 
 Rules can be edited on the Rules page, a preset rule put back as its preset (rules 0.1.8).
+
+## [0.6.7] - 2026-11-14
+
+The page an equipment switch returns to is checked by `i18n_safe_next`: a path on this application and nothing else.
