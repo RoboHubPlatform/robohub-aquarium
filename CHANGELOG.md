@@ -220,3 +220,7 @@ Uses the toolchain's `i64_to_str` and `str_field` instead of its own copies, and
 ## [0.6.9] - 2026-11-14
 
 A water test, a water change or a dose entered by mistake can be deleted from its row, after a confirmation; deleting a dose puts what it took back on the product's stock.
+
+## [0.6.10] - 2026-11-14
+
+Its settings page lists the inventory, scheduler and widgets tabs itself (`host_settings_*`), each module's own form.

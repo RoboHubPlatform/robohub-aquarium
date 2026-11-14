@@ -27,6 +27,35 @@ fn host_app_title() string {
     return "Aquarium"
 }
 
+// The settings tabs this application's modules add to appshell's page, each
+// module's own form.
+fn host_settings_tabs() string {
+    return "inventory|inventory.settings_tab,scheduler|scheduler.settings_tab,widgets|widgets.settings_tab,"
+}
+
+fn host_settings_form(req: Request, tab: string, action: string) string {
+    if rho_str_eq(tab, "inventory") {
+        return inventory_settings_form(req, action)
+    }
+    if rho_str_eq(tab, "scheduler") {
+        return scheduler_settings_form(req, action)
+    }
+    if rho_str_eq(tab, "widgets") {
+        return widgets_settings_form(req, action)
+    }
+    return ""
+}
+
+fn host_settings_save(req: Request, tab: string, body: string) void {
+    if rho_str_eq(tab, "inventory") {
+        inventory_settings_save(body)
+    } else if rho_str_eq(tab, "scheduler") {
+        scheduler_settings_save(body)
+    } else if rho_str_eq(tab, "widgets") {
+        widgets_settings_save(body)
+    }
+}
+
 // aqua_rail is the places, grouped as the work is: the tank, its care, what runs
 // by itself, and the system.
 fn aqua_rail(req: Request) string {
