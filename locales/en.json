@@ -81,6 +81,8 @@
   "overview.in_band": "in band",
   "overview.lights_off_until": "lights off until",
   "overview.lights_on_until": "lights on until",
+  "overview.lights_on": "lights on",
+  "overview.lights_off": "lights off",
   "overview.low": "low",
   "overview.mode": "Mode:",
   "overview.no_probe": "Bind the heater's temperature to a probe to see the last day here.",

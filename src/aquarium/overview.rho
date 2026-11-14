@@ -401,10 +401,15 @@ fn aquarium_home(req: Request) Response {
     }
     let light: string = inventory_read(aqua_role_handle(tank, "light"), "switch")
     if light != "" {
-        if aqua_is_on(light) {
+        // A tank with no light hours says only which way the lights are.
+        if aqua_is_on(light) && tank.lights_off != "" {
             status = status + " · " + i18n_t(req, "overview.lights_on_until") + " " + tank.lights_off
-        } else {
+        } else if aqua_is_on(light) {
+            status = status + " · " + i18n_t(req, "overview.lights_on")
+        } else if tank.lights_on != "" {
             status = status + " · " + i18n_t(req, "overview.lights_off_until") + " " + tank.lights_on
+        } else {
+            status = status + " · " + i18n_t(req, "overview.lights_off")
         }
     }
     let days: string = appapi_value("days_since_water_change")

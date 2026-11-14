@@ -224,3 +224,7 @@ A water test, a water change or a dose entered by mistake can be deleted from it
 ## [0.6.10] - 2026-11-14
 
 Its settings page lists the inventory, scheduler and widgets tabs itself (`host_settings_*`), each module's own form.
+
+## [0.6.11] - 2026-11-14
+
+A tank with no light hours says "lights on" or "lights off" on its overview instead of "lights off until" with nothing after it.

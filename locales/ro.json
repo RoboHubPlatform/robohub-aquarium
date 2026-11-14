@@ -81,6 +81,8 @@
   "overview.in_band": "în limite",
   "overview.lights_off_until": "lumini stinse până la",
   "overview.lights_on_until": "lumini aprinse până la",
+  "overview.lights_on": "lumini aprinse",
+  "overview.lights_off": "lumini stinse",
   "overview.low": "puțin",
   "overview.mode": "Mod:",
   "overview.no_probe": "Leagă temperatura încălzitorului de o sondă ca să vezi aici ultima zi.",
